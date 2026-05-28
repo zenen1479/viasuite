@@ -74,14 +74,29 @@ const supa = {
 
 // ─── DATA HELPERS (convert DB rows to app format) ─────────────────────────────
 const dbToClient = r => ({
-  id: r.id, created: r.created_at?.slice(0,10), cat: r.cat||"GENERAL",
-  status: r.status||"activo", advisorId: r.advisor_id,
+  id: r.id, created: r.created_at?.slice(0,10),
+  clientNo: r.client_no||"",
+  tipo: r.tipo||"persona",
+  cat: r.cat||"GENERAL", status: r.status||"activo", advisorId: r.advisor_id,
+  // Persona
   firstName: r.first_name||"", lastNameP: r.last_name_p||"", lastNameM: r.last_name_m||"",
   birthdate: r.birthdate||"", alta: r.created_at?.slice(0,10)||"",
-  mobile: r.mobile||"", phone: r.phone||"", email: r.email||"", email2: r.email2||"",
-  address: r.address||"", city: r.city||"", country: r.country||"Panama",
-  nationality: r.nationality||"Panama - PA", notes: r.notes||"",
-  howKnow: r.how_know||"", recommended: r.recommended||"", contact: r.contact||"",
+  // Empresa
+  razonSocial: r.razon_social||"", ruc: r.ruc||"", representante: r.representante||"",
+  // Contacto
+  mobile: r.mobile||"", phone: r.phone||"", officePhone: r.office_phone||"",
+  email: r.email||"", email2: r.email2||"",
+  address: r.address||"", colonia: r.colonia||"", city: r.city||"",
+  cp: r.cp||"", state: r.state||"", country: r.country||"Panama",
+  nationality: r.nationality||"Panama - PA",
+  contact: r.contact||"", recommended: r.recommended||"", howKnow: r.how_know||"",
+  notes: r.notes||"",
+  // Documentos
+  passport: r.passport ? JSON.parse(r.passport) : { numero:"", vencimiento:"", foto:null },
+  visas: r.visas ? JSON.parse(r.visas) : [],
+  relaciones: r.relaciones ? JSON.parse(r.relaciones) : [],
+  // Fiscal
+  taxId: r.tax_id||"", taxName: r.tax_name||"", taxAddress: r.tax_address||"",
   docs: [],
 });
 
@@ -140,17 +155,31 @@ const ADVISORS = [
   { id:"5", name:"Admin Sistema",  wp:"6938-0957" },
 ];
 
-const WHOLESALERS = [
-  { id:"bbr",       name:"Bijao Beach Resort",    code:"BBR" },
-  { id:"hyatt",     name:"Hyatt Hotels",           code:"HYT" },
-  { id:"marriott",  name:"Marriott International", code:"MRR" },
-  { id:"copa",      name:"Copa Airlines",          code:"CM"  },
-  { id:"airfrance", name:"Air France",             code:"AF"  },
-  { id:"wizz",      name:"Wizz Air",               code:"W6"  },
-  { id:"accessrail",name:"AccessRail",             code:"AR"  },
-  { id:"assistcard",name:"Assist-Card",            code:"AC"  },
-  { id:"other",     name:"Otro",                   code:"OTR" },
+// ─── CATÁLOGO MAYORISTAS / AEROLÍNEAS / HOTELES ──────────────────────────────
+// Se inicializa desde estado global (App) para permitir agregar/editar/eliminar
+const WHOLESALERS_SEED = [
+  // Hoteles nacionales
+  { id:"bbr",       name:"Bijao Beach Resort",       code:"BBR",  tipo:"hotel",     pais:"Panama",  contacto:"", email:"", phone:"", web:"granevenia.com",    notas:"" },
+  { id:"hyatt",     name:"Hyatt Hotels",             code:"HYT",  tipo:"hotel",     pais:"USA",     contacto:"", email:"", phone:"", web:"hyatt.com",         notas:"" },
+  { id:"marriott",  name:"Marriott International",   code:"MRR",  tipo:"hotel",     pais:"USA",     contacto:"", email:"", phone:"", web:"marriott.com",      notas:"" },
+  // Aerolíneas
+  { id:"copa",      name:"Copa Airlines",            code:"CM",   tipo:"aerolinea", pais:"Panama",  contacto:"", email:"", phone:"", web:"copaair.com",       notas:"" },
+  { id:"airfrance", name:"Air France",               code:"AF",   tipo:"aerolinea", pais:"Francia", contacto:"", email:"", phone:"", web:"airfrance.com",     notas:"" },
+  { id:"wizz",      name:"Wizz Air",                 code:"W6",   tipo:"aerolinea", pais:"Hungria", contacto:"", email:"", phone:"", web:"wizzair.com",       notas:"" },
+  { id:"united",    name:"United Airlines",          code:"UA",   tipo:"aerolinea", pais:"USA",     contacto:"", email:"", phone:"", web:"united.com",        notas:"" },
+  { id:"american",  name:"American Airlines",        code:"AA",   tipo:"aerolinea", pais:"USA",     contacto:"", email:"", phone:"", web:"aa.com",            notas:"" },
+  { id:"latam",     name:"LATAM Airlines",           code:"LA",   tipo:"aerolinea", pais:"Chile",   contacto:"", email:"", phone:"", web:"latam.com",         notas:"" },
+  { id:"iberia",    name:"Iberia",                   code:"IB",   tipo:"aerolinea", pais:"España",  contacto:"", email:"", phone:"", web:"iberia.com",        notas:"" },
+  // Mayoristas
+  { id:"accessrail",name:"AccessRail",               code:"AR",   tipo:"mayorista", pais:"USA",     contacto:"", email:"", phone:"", web:"accessrail.com",    notas:"" },
+  { id:"assistcard",name:"Assist-Card",              code:"AC",   tipo:"mayorista", pais:"Argentina",contacto:"",email:"", phone:"", web:"assistcard.com",   notas:"" },
+  { id:"hotelbeds", name:"Hotelbeds",                code:"HB",   tipo:"mayorista", pais:"España",  contacto:"", email:"", phone:"", web:"hotelbeds.com",     notas:"" },
+  { id:"tatajuba",  name:"Tatajuba Travel",          code:"TAT",  tipo:"mayorista", pais:"Brasil",  contacto:"", email:"", phone:"", web:"tatajuba.travel",   notas:"" },
+  { id:"hyperguest",name:"HyperGuest",               code:"HG",   tipo:"mayorista", pais:"Israel",  contacto:"", email:"", phone:"", web:"hyperguest.com",    notas:"" },
+  { id:"other",     name:"Otro",                     code:"OTR",  tipo:"mayorista", pais:"",        contacto:"", email:"", phone:"", web:"",                  notas:"" },
 ];
+// Para el selector en expedientes usamos este array simplificado
+const WHOLESALERS = WHOLESALERS_SEED;
 
 const CONCEPTS = ["HOTELES NACIONALES","HOTELES INTERNACIONALES","VUELOS NACIONALES","VUELOS INTERNACIONALES","TOURS Y EXCURSIONES","TRASLADOS","SEGUROS DE VIAJE","CRUCEROS","PAQUETES TURISTICOS","OTROS SERVICIOS"];
 const PAY_METHODS = ["Transferencia","Tarjeta crédito","Tarjeta débito","TPV/Tarjeta Crédito","Efectivo","Yappy","Zelle","PayPal","Cheque"];
@@ -292,7 +321,34 @@ const mkItem   = () => ({ id:uid(), concept:"HOTELES NACIONALES", wholesalerId:"
 const mkPay    = () => ({ id:uid(), date:today(), agentId:"1", account:"BG corriente 69-1", method:"Transferencia", reference:"", amount:0, confirmed:true, receipt:String(Math.floor(10000+Math.random()*90000)), note:"" });
 const mkMPay   = () => ({ id:uid(), date:today(), agentId:"1", account:"", method:"Transferencia", reference:"", amount:0, confirmed:true, receipt:String(Math.floor(500000+Math.random()*100000)), note:"" });
 const mkAlarm  = (type="manual") => ({ id:uid(), type, date:today(), note:"", status:"pending", source:"manual", createdAt:today() });
-const mkClient = () => ({ id:uid(), created:today(), cat:"GENERAL", status:"activo", advisorId:"1", firstName:"", lastNameP:"", lastNameM:"", birthdate:"", alta:today(), mobile:"", phone:"", email:"", email2:"", address:"", city:"", country:"Panama", nationality:"Panama - PA", notes:"", docs:[] });
+// Número de cliente autogenerado desde 1000
+let _clientCounter = 1000;
+const nextClientNo = (existingClients=[]) => {
+  const nums = existingClients.map(c=>parseInt(c.clientNo)||0).filter(Boolean);
+  const max = nums.length ? Math.max(...nums) : 999;
+  return String(max + 1).padStart(4,"0");
+};
+const mkClient = (existingClients=[]) => ({
+  id:uid(), created:today(), clientNo: nextClientNo(existingClients),
+  tipo:"persona", // "persona" | "empresa"
+  cat:"GENERAL", status:"activo", advisorId:"1",
+  // Persona natural
+  firstName:"", lastNameP:"", lastNameM:"", birthdate:"",
+  // Empresa
+  razonSocial:"", ruc:"", representante:"",
+  // Común
+  alta:today(), mobile:"", phone:"", officePhone:"", email:"", email2:"",
+  address:"", colonia:"", city:"", cp:"00000", state:"", country:"Panama",
+  nationality:"Panama - PA", contact:"", recommended:"", howKnow:"", notes:"",
+  // Pasaporte y documentos
+  passport:{ numero:"", vencimiento:"", foto:null },
+  visas:[],
+  // Relaciones familiares/amigos
+  relaciones:[],
+  // Fiscal
+  taxId:"", taxName:"", taxAddress:"",
+  docs:[],
+});
 const mkExp    = () => ({ id:uid(), no:Math.floor(7000+Math.random()*500), ventaNo:Math.floor(6500+Math.random()*500), created:today(), status:"nuevo", advisorId:"1", medium:"WHATSAPP", clientId:"", clientName:"", trip:{ title:"", destination:"", dateFrom:"", dateTo:"", paxAdult:2, paxChild:0, category:"" }, items:[], payments:[], majorPayments:[], alarms:[], contract:null, notes:"" });
 
 // ─── UI ───────────────────────────────────────────────────────────────────────
@@ -1291,90 +1347,289 @@ function CliForm({ client, onSave, onBack }) {
   const [c, setC]  = useState(() => JSON.parse(JSON.stringify(client)));
   const [tab, setTab] = useState("personales");
   const upd = (f,v) => setC(p => ({ ...p, [f]: v }));
-  const name = [c.firstName, c.lastNameP, c.lastNameM].filter(Boolean).join(" ");
+  const isEmpresa = c.tipo === "empresa";
+  const name = isEmpresa ? (c.razonSocial||"Nueva empresa") : [c.firstName, c.lastNameP, c.lastNameM].filter(Boolean).join(" ");
+
+  // Alarma de vencimiento de pasaporte (6 meses)
+  const passportAlert = () => {
+    if(!c.passport?.vencimiento) return null;
+    const venc = new Date(c.passport.vencimiento);
+    const sixMonths = new Date(); sixMonths.setMonth(sixMonths.getMonth()+6);
+    if(venc < new Date()) return { level:"danger", msg:"⚠️ Pasaporte VENCIDO" };
+    if(venc < sixMonths) return { level:"warning", msg:"🔔 Pasaporte vence en menos de 6 meses" };
+    return null;
+  };
+  const passAlert = passportAlert();
 
   const TABS = [
-    { id:"personales", label:"Personales" },
-    { id:"fiscales",   label:"Fiscales" },
-    { id:"pasajeros",  label:"Pasajeros" },
+    { id:"personales", label: isEmpresa ? "Empresa" : "Personales" },
+    { id:"documentos", label:"Documentos" },
+    { id:"fiscales",   label:"Fiscal" },
+    { id:"relaciones", label:"Relaciones" },
     { id:"historial",  label:"Historial" },
   ];
 
+  const RELACION_TIPOS = ["Cónyuge/Pareja","Hijo/a","Padre/Madre","Hermano/a","Amigo/a","Familiar","Colega","Otro"];
+
   return (
     <div style={{ padding:18, maxWidth:980, margin:"0 auto" }}>
+      {/* Header */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:7 }}>
         <div>
-          <h2 style={{ margin:0, fontSize:16, color:B.dark, fontWeight:800 }}>Cliente: {name||"Nuevo cliente"}</h2>
-          <div style={{ marginTop:5 }}>
-            <input placeholder="Buscar cliente o pasajero existente" style={{ ...SI, width:280, padding:"4px 8px", fontSize:10 }}/>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <h2 style={{ margin:0, fontSize:16, color:B.dark, fontWeight:800 }}>
+              {isEmpresa ? "🏢" : "👤"} {name||"Nuevo cliente"}
+            </h2>
+            {c.clientNo && (
+              <span style={{ background:"#EDE7F6", color:"#512DA8", padding:"2px 8px", borderRadius:5, fontSize:11, fontWeight:700 }}>
+                #{c.clientNo}
+              </span>
+            )}
+            {c.tipo==="persona" && c.cat==="VIP" && <span style={{ background:"#FFF8E1", color:"#F9A825", padding:"2px 8px", borderRadius:5, fontSize:10, fontWeight:700 }}>⭐ VIP</span>}
           </div>
+          {passAlert && (
+            <div style={{ marginTop:6, padding:"4px 10px", borderRadius:5, background: passAlert.level==="danger"?"#FFEBEE":"#FFF8E1", color: passAlert.level==="danger"?"#C62828":"#F9A825", fontSize:11, fontWeight:700 }}>
+              {passAlert.msg}
+            </div>
+          )}
         </div>
-        <div style={{ display:"flex", gap:5 }}>
-          <Btn v="primary" sz="sm" onClick={() => onSave(c)}>Actualizar datos</Btn>
+        <div style={{ display:"flex", gap:5, alignItems:"center" }}>
+          {/* Selector tipo */}
+          <div style={{ display:"flex", background:"#F1F5F9", borderRadius:7, padding:3, gap:2 }}>
+            {["persona","empresa"].map(t=>(
+              <button key={t} onClick={()=>upd("tipo",t)}
+                style={{ padding:"4px 12px", borderRadius:5, border:"none", background:c.tipo===t?"#fff":"transparent", color:c.tipo===t?B.dark:"#546E7A", fontWeight:c.tipo===t?700:400, fontSize:11, cursor:"pointer", fontFamily:"inherit" }}>
+                {t==="persona"?"👤 Persona":"🏢 Empresa"}
+              </button>
+            ))}
+          </div>
+          <Btn v="primary" sz="sm" onClick={() => onSave(c)}>Guardar</Btn>
           <Btn v="secondary" sz="sm" onClick={onBack}>&larr; Atrás</Btn>
         </div>
       </div>
 
       <Tabs tabs={TABS} active={tab} onSelect={setTab}/>
 
+      {/* ── TAB PERSONALES / EMPRESA ── */}
       {tab==="personales" && (
         <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, padding:16 }}>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:9, marginBottom:9 }}>
-            <FS label="Categoría Cliente" value={c.cat} onChange={v => upd("cat",v)} options={CLI_CATS.map(x => ({value:x,label:x}))}/>
+            <FS label="Categoría" value={c.cat} onChange={v => upd("cat",v)} options={CLI_CATS.map(x => ({value:x,label:x}))}/>
             <FS label="Estatus" value={c.status} onChange={v => upd("status",v)} options={[{value:"activo",label:"Activo"},{value:"inactivo",label:"Inactivo"}]}/>
-            <FS label="Formato" value={c.format||"Activado"} onChange={v => upd("format",v)} options={["Activado","Desactivado"].map(x => ({value:x,label:x}))}/>
+            <FS label="Agente" value={c.advisorId} onChange={v => upd("advisorId",v)} options={ADVISORS.map(a => ({value:a.id,label:a.name}))}/>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr 1fr", gap:9, marginBottom:9 }}>
-            <FI label="Nombre(s)*"       value={c.firstName} onChange={v => upd("firstName",v)}/>
-            <FI label="Apellido Paterno*" value={c.lastNameP} onChange={v => upd("lastNameP",v)}/>
-            <FI label="Apellido Materno"  value={c.lastNameM} onChange={v => upd("lastNameM",v)}/>
-            <FI label="Fecha Nacimiento"  value={c.birthdate} onChange={v => upd("birthdate",v)} type="date"/>
-            <FI label="Fecha Alta"        value={c.alta}      onChange={v => upd("alta",v)}      type="date"/>
-            <FS label="Agente"            value={c.advisorId} onChange={v => upd("advisorId",v)}
-              options={ADVISORS.map(a => ({value:a.id,label:a.name}))}/>
-          </div>
+
+          {/* PERSONA NATURAL */}
+          {!isEmpresa && (<>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr", gap:9, marginBottom:9 }}>
+              <FI label="Nombre(s)*"        value={c.firstName} onChange={v => upd("firstName",v)}/>
+              <FI label="Apellido Paterno*" value={c.lastNameP} onChange={v => upd("lastNameP",v)}/>
+              <FI label="Apellido Materno"  value={c.lastNameM} onChange={v => upd("lastNameM",v)}/>
+              <FI label="Fecha Nacimiento"  value={c.birthdate} onChange={v => upd("birthdate",v)} type="date"/>
+              <FI label="Fecha Alta"        value={c.alta}      onChange={v => upd("alta",v)}      type="date"/>
+            </div>
+          </>)}
+
+          {/* EMPRESA */}
+          {isEmpresa && (<>
+            <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:9, marginBottom:9 }}>
+              <FI label="Razón Social *"     value={c.razonSocial||""} onChange={v => upd("razonSocial",v)} placeholder="Nombre legal de la empresa"/>
+              <FI label="RUC / NIT"           value={c.ruc||""}         onChange={v => upd("ruc",v)}         placeholder="RUC o NIT..."/>
+              <FI label="Representante legal" value={c.representante||""} onChange={v => upd("representante",v)} placeholder="Nombre del representante"/>
+            </div>
+          </>)}
+
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr", gap:9, marginBottom:9 }}>
-            <FI label="Móvil"           value={c.mobile}      onChange={v => upd("mobile",v)}      placeholder="+507 6000-0000"/>
-            <FI label="Telefono Casa"   value={c.phone}       onChange={v => upd("phone",v)}/>
-            <FI label="Telefono Oficina" value={c.officePhone||""} onChange={v => upd("officePhone",v)}/>
-            <FI label="Email *"         value={c.email}       onChange={v => upd("email",v)}       placeholder="correo@email.com"/>
-            <FI label="Email 2"         value={c.email2}      onChange={v => upd("email2",v)}/>
+            <FI label="Móvil / WhatsApp"   value={c.mobile}          onChange={v => upd("mobile",v)}      placeholder="+507 6000-0000"/>
+            <FI label="Teléfono casa"      value={c.phone}           onChange={v => upd("phone",v)}/>
+            <FI label="Teléfono oficina"   value={c.officePhone||""} onChange={v => upd("officePhone",v)}/>
+            <FI label="Email *"            value={c.email}           onChange={v => upd("email",v)}       placeholder="correo@email.com"/>
+            <FI label="Email 2"            value={c.email2}          onChange={v => upd("email2",v)}/>
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:9, marginBottom:9 }}>
-            <FI label="Dirección"  value={c.address}  onChange={v => upd("address",v)}/>
-            <FI label="Colonia"    value={c.colonia||""} onChange={v => upd("colonia",v)}/>
-            <FI label="Ciudad"     value={c.city}     onChange={v => upd("city",v)}/>
-            <FI label="C.P."       value={c.cp||"00000"} onChange={v => upd("cp",v)}/>
+            <FI label="Dirección" value={c.address}    onChange={v => upd("address",v)}/>
+            <FI label="Colonia"   value={c.colonia||""} onChange={v => upd("colonia",v)}/>
+            <FI label="Ciudad"    value={c.city}        onChange={v => upd("city",v)}/>
+            <FI label="C.P."      value={c.cp||""}      onChange={v => upd("cp",v)}/>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr 1fr", gap:9, marginBottom:14 }}>
-            <FI label="Estado"   value={c.state||""} onChange={v => upd("state",v)}/>
-            <FI label="País"     value={c.country}   onChange={v => upd("country",v)}/>
-            <FS label="Nacionalidad" value={c.nationality} onChange={v => upd("nationality",v)}
-              options={["Panama - PA","Mexico - MX","Colombia - CO","Venezuela - VE","USA - US","España - ES","Otro"].map(x => ({value:x,label:x}))}/>
-            <FI label="Contacto"   value={c.contact||""}  onChange={v => upd("contact",v)}/>
-            <FI label="Recomendó"  value={c.recommended||""} onChange={v => upd("recommended",v)}/>
-            <FI label="Como supo"  value={c.howKnow||""}  onChange={v => upd("howKnow",v)}/>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr 1fr", gap:9, marginBottom:9 }}>
+            <FI label="Estado/Provincia" value={c.state||""}       onChange={v => upd("state",v)}/>
+            <FI label="País"             value={c.country}         onChange={v => upd("country",v)}/>
+            <FS label="Nacionalidad"     value={c.nationality}     onChange={v => upd("nationality",v)}
+              options={["Panama - PA","Mexico - MX","Colombia - CO","Venezuela - VE","USA - US","España - ES","Argentina - AR","Chile - CL","Otro"].map(x => ({value:x,label:x}))}/>
+            <FI label="Contacto"    value={c.contact||""}     onChange={v => upd("contact",v)}/>
+            <FI label="Recomendó"   value={c.recommended||""} onChange={v => upd("recommended",v)}/>
+            <FI label="Cómo supo"   value={c.howKnow||""}    onChange={v => upd("howKnow",v)}/>
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:9 }}>
-            <FTA label="Como supo (detalles)" value={c.howKnow||""} onChange={v => upd("howKnow",v)} rows={2}/>
-            <FTA label="Notas"                value={c.notes}       onChange={v => upd("notes",v)}   rows={2}/>
+            <FTA label="Notas internas" value={c.notes} onChange={v => upd("notes",v)} rows={2}/>
           </div>
-          <div style={{ marginTop:14, textAlign:"center" }}>
-            <Btn v="teal" sz="lg" full onClick={() => onSave(c)}>Actualizar datos</Btn>
-          </div>
-          <div style={{ marginTop:14, paddingTop:10, borderTop:"1px solid #E0E0E0" }}>
-            <div style={{ fontWeight:700, fontSize:10, color:"#546E7A", marginBottom:7 }}>
-              Documentos Migratorios <span style={{ color:B.blue, cursor:"pointer", fontSize:12 }}>+</span>
-            </div>
-            {(c.docs||[]).length===0 && <div style={{ color:"#B0BEC5", fontSize:10 }}>No hay documentos para este cliente</div>}
+          <div style={{ marginTop:14, textAlign:"right" }}>
+            <Btn v="teal" sz="lg" onClick={() => onSave(c)}>Guardar cliente</Btn>
           </div>
         </div>
       )}
 
-      {tab!=="personales" && (
-        <div style={{ textAlign:"center", padding:30, color:"#B0BEC5", fontSize:11 }}>
-          <div style={{ fontSize:28, marginBottom:8 }}>🔧</div>
-          Módulo en construcción — Fase 2
+      {/* ── TAB DOCUMENTOS ── */}
+      {tab==="documentos" && (
+        <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, padding:16 }}>
+
+          {/* Pasaporte */}
+          <div style={{ marginBottom:20 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:B.dark, marginBottom:12, display:"flex", alignItems:"center", gap:8 }}>
+              🛂 Pasaporte
+              {passAlert && (
+                <span style={{ padding:"2px 9px", borderRadius:5, fontSize:10, fontWeight:700, background: passAlert.level==="danger"?"#FFEBEE":"#FFF8E1", color: passAlert.level==="danger"?"#C62828":"#F9A825" }}>
+                  {passAlert.msg}
+                </span>
+              )}
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:12 }}>
+              <FI label="Número de pasaporte" value={c.passport?.numero||""} onChange={v=>upd("passport",{...c.passport,numero:v})} placeholder="AB123456"/>
+              <FI label="Fecha de vencimiento" value={c.passport?.vencimiento||""} onChange={v=>upd("passport",{...c.passport,vencimiento:v})} type="date"/>
+              <div>
+                <div style={{ fontSize:10, fontWeight:700, color:"#546E7A", marginBottom:6 }}>FOTO DEL PASAPORTE</div>
+                <label style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", border:"1px dashed #BBDEFB", borderRadius:6, cursor:"pointer", fontSize:11, color:B.blue }}>
+                  <span>📎</span>
+                  {c.passport?.foto ? "✓ Foto cargada — clic para cambiar" : "Cargar foto del pasaporte"}
+                  <input type="file" accept="image/*,.pdf" style={{ display:"none" }}
+                    onChange={e=>{
+                      const file = e.target.files[0];
+                      if(!file) return;
+                      const reader = new FileReader();
+                      reader.onload = ev => upd("passport",{...c.passport,foto:ev.target.result,fotoName:file.name});
+                      reader.readAsDataURL(file);
+                    }}/>
+                </label>
+                {c.passport?.foto && (
+                  <div style={{ marginTop:6, display:"flex", alignItems:"center", gap:6 }}>
+                    <span style={{ fontSize:10, color:"#546E7A" }}>📄 {c.passport.fotoName||"Foto cargada"}</span>
+                    <button onClick={()=>upd("passport",{...c.passport,foto:null,fotoName:""})} style={{ background:"none",border:"none",cursor:"pointer",color:"#EF5350",fontSize:11 }}>✕ Eliminar</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Visas */}
+          <div style={{ borderTop:"1px solid #F0F0F0", paddingTop:16 }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:B.dark }}>🪪 Visas</div>
+              <button onClick={()=>upd("visas",[...(c.visas||[]),{id:uid(),pais:"",tipo:"",numero:"",vencimiento:"",foto:null}])}
+                style={{ background:B.blue, color:"#fff", border:"none", borderRadius:6, padding:"4px 12px", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                + Agregar visa
+              </button>
+            </div>
+            {(c.visas||[]).length===0 && <div style={{ color:"#B0BEC5", fontSize:11, textAlign:"center", padding:16 }}>No hay visas registradas</div>}
+            {(c.visas||[]).map((v,i)=>{
+              const vencDate = v.vencimiento ? new Date(v.vencimiento) : null;
+              const sixMo = new Date(); sixMo.setMonth(sixMo.getMonth()+6);
+              const visaAlert = vencDate && vencDate < new Date() ? "VENCIDA" : vencDate && vencDate < sixMo ? "POR VENCER" : null;
+              return (
+                <div key={v.id} style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr auto", gap:9, marginBottom:8, padding:"10px 12px", background:"#F8FAFC", borderRadius:8, border:"1px solid #E0E0E0" }}>
+                  <FI label="País" value={v.pais} onChange={val=>upd("visas",(c.visas||[]).map((x,j)=>j===i?{...x,pais:val}:x))} placeholder="USA, Schengen..."/>
+                  <FI label="Tipo" value={v.tipo} onChange={val=>upd("visas",(c.visas||[]).map((x,j)=>j===i?{...x,tipo:val}:x))} placeholder="Turista, Trabajo..."/>
+                  <FI label="Número" value={v.numero||""} onChange={val=>upd("visas",(c.visas||[]).map((x,j)=>j===i?{...x,numero:val}:x))} placeholder="V123456"/>
+                  <div>
+                    <FI label="Vencimiento" value={v.vencimiento} onChange={val=>upd("visas",(c.visas||[]).map((x,j)=>j===i?{...x,vencimiento:val}:x))} type="date"/>
+                    {visaAlert && <div style={{ fontSize:9, fontWeight:700, color: visaAlert==="VENCIDA"?"#C62828":"#F9A825", marginTop:2 }}>⚠️ {visaAlert}</div>}
+                  </div>
+                  <button onClick={()=>upd("visas",(c.visas||[]).filter((_,j)=>j!==i))}
+                    style={{ background:"none", border:"none", cursor:"pointer", color:"#EF5350", fontSize:18, alignSelf:"center", marginTop:12 }}>✕</button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB FISCAL ── */}
+      {tab==="fiscales" && (
+        <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, padding:16 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:B.dark, marginBottom:16 }}>🧾 Datos fiscales del cliente</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <FI label="RUC / NIT / RFC" value={c.taxId||""} onChange={v=>upd("taxId",v)} placeholder="Número de contribuyente"/>
+            <FI label="Razón social / Nombre fiscal" value={c.taxName||""} onChange={v=>upd("taxName",v)} placeholder="Nombre para facturación"/>
+            <div style={{ gridColumn:"1/-1" }}>
+              <FI label="Dirección fiscal" value={c.taxAddress||""} onChange={v=>upd("taxAddress",v)} placeholder="Dirección para facturación..."/>
+            </div>
+          </div>
+          <div style={{ marginTop:16, textAlign:"right" }}>
+            <Btn v="teal" sz="sm" onClick={() => onSave(c)}>Guardar datos fiscales</Btn>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB RELACIONES ── */}
+      {tab==="relaciones" && (
+        <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, padding:16 }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+            <div>
+              <div style={{ fontSize:12, fontWeight:700, color:B.dark }}>👨‍👩‍👧 Viajeros asociados</div>
+              <div style={{ fontSize:11, color:"#546E7A", marginTop:2 }}>Registra los datos de cónyuge, hijos, padres u otros viajeros frecuentes de este cliente.</div>
+            </div>
+            <button onClick={()=>upd("relaciones",[...(c.relaciones||[]),{id:uid(),tipo:"Cónyuge/Pareja",firstName:"",lastNameP:"",birthdate:"",passport:{numero:"",vencimiento:"",foto:null},visas:[]}])}
+              style={{ background:B.blue, color:"#fff", border:"none", borderRadius:6, padding:"6px 14px", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+              + Agregar viajero
+            </button>
+          </div>
+
+          {(c.relaciones||[]).length===0 && (
+            <div style={{ textAlign:"center", padding:32, color:"#B0BEC5", fontSize:11 }}>
+              <div style={{ fontSize:28, marginBottom:8 }}>👨‍👩‍👧</div>
+              No hay viajeros asociados a este cliente.<br/>Agrega cónyuge, hijos o familiares que viajan frecuentemente.
+            </div>
+          )}
+
+          {(c.relaciones||[]).map((rel,i)=>{
+            const relPassAlert = () => {
+              if(!rel.passport?.vencimiento) return null;
+              const venc = new Date(rel.passport.vencimiento);
+              const sixMo = new Date(); sixMo.setMonth(sixMo.getMonth()+6);
+              if(venc < new Date()) return "VENCIDO";
+              if(venc < sixMo) return "POR VENCER";
+              return null;
+            };
+            const rpa = relPassAlert();
+            const updRel = (f,v) => upd("relaciones",(c.relaciones||[]).map((x,j)=>j===i?{...x,[f]:v}:x));
+            return (
+              <div key={rel.id} style={{ border:"1px solid #E0E0E0", borderRadius:10, padding:16, marginBottom:12, background:"#FAFAFA" }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ fontSize:20 }}>👤</span>
+                    <div style={{ fontWeight:700, fontSize:13 }}>{[rel.firstName,rel.lastNameP].filter(Boolean).join(" ")||"Nuevo viajero"}</div>
+                    <span style={{ background:"#EDE7F6", color:"#512DA8", padding:"2px 8px", borderRadius:5, fontSize:10, fontWeight:700 }}>{rel.tipo}</span>
+                    {rpa && <span style={{ background: rpa==="VENCIDO"?"#FFEBEE":"#FFF8E1", color: rpa==="VENCIDO"?"#C62828":"#F9A825", padding:"2px 8px", borderRadius:5, fontSize:10, fontWeight:700 }}>⚠️ Pasaporte {rpa}</span>}
+                  </div>
+                  <button onClick={()=>upd("relaciones",(c.relaciones||[]).filter((_,j)=>j!==i))}
+                    style={{ background:"none", border:"none", cursor:"pointer", color:"#EF5350", fontSize:16 }}>✕ Eliminar</button>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr", gap:9 }}>
+                  <FS label="Relación" value={rel.tipo} onChange={v=>updRel("tipo",v)} options={RELACION_TIPOS.map(t=>({value:t,label:t}))}/>
+                  <FI label="Nombre(s)" value={rel.firstName||""} onChange={v=>updRel("firstName",v)}/>
+                  <FI label="Apellido" value={rel.lastNameP||""} onChange={v=>updRel("lastNameP",v)}/>
+                  <FI label="Fecha nacimiento" value={rel.birthdate||""} onChange={v=>updRel("birthdate",v)} type="date"/>
+                  <FI label="Pasaporte #" value={rel.passport?.numero||""} onChange={v=>updRel("passport",{...rel.passport,numero:v})}/>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:9, marginTop:9 }}>
+                  <FI label="Venc. pasaporte" value={rel.passport?.vencimiento||""} onChange={v=>updRel("passport",{...rel.passport,vencimiento:v})} type="date"/>
+                  <FI label="Móvil" value={rel.mobile||""} onChange={v=>updRel("mobile",v)} placeholder="+507 6000-0000"/>
+                  <FI label="Email" value={rel.email||""} onChange={v=>updRel("email",v)} placeholder="email@correo.com"/>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── TAB HISTORIAL ── */}
+      {tab==="historial" && (
+        <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, padding:16 }}>
+          <div style={{ textAlign:"center", padding:32, color:"#B0BEC5", fontSize:11 }}>
+            <div style={{ fontSize:28, marginBottom:8 }}>📋</div>
+            El historial de expedientes y monto total comprado se mostrará aquí.<br/>
+            <span style={{ fontSize:10 }}>Se conecta automáticamente con los expedientes asociados a este cliente.</span>
+          </div>
         </div>
       )}
     </div>
@@ -1383,40 +1638,92 @@ function CliForm({ client, onSave, onBack }) {
 
 // ─── CLIENTS LIST ─────────────────────────────────────────────────────────────
 function CliList({ clients, onSelect, onNew }) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch]   = useState("");
+  const [filtroTipo, setFiltroTipo] = useState("todos"); // todos, persona, empresa
+
+  const personas  = clients.filter(c => c.tipo !== "empresa");
+  const empresas  = clients.filter(c => c.tipo === "empresa");
+
   const filtered = clients.filter(c => {
     const s = search.toLowerCase();
-    const n = `${c.firstName} ${c.lastNameP} ${c.lastNameM}`.toLowerCase();
-    return !s || n.includes(s) || c.email.toLowerCase().includes(s) || c.mobile.includes(s);
+    const isEmp = c.tipo === "empresa";
+    const n = isEmp ? (c.razonSocial||"").toLowerCase() : `${c.firstName} ${c.lastNameP} ${c.lastNameM}`.toLowerCase();
+    const matchSearch = !s || n.includes(s) || (c.email||"").toLowerCase().includes(s) || (c.mobile||"").includes(s) || (c.clientNo||"").includes(s);
+    const matchTipo   = filtroTipo === "todos" || c.tipo === filtroTipo || (filtroTipo==="persona" && c.tipo !== "empresa");
+    return matchSearch && matchTipo;
   });
 
   return (
     <div style={{ padding:18, maxWidth:1100, margin:"0 auto" }}>
+      {/* Stats */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:14 }}>
+        {[
+          { label:"Total clientes", val:clients.length, icon:"👥", color:B.blue },
+          { label:"Personas naturales", val:personas.length, icon:"👤", color:B.teal },
+          { label:"Empresas", val:empresas.length, icon:"🏢", color:B.gold },
+        ].map(s=>(
+          <div key={s.label} style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:8, padding:"10px 14px", display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ fontSize:20 }}>{s.icon}</div>
+            <div>
+              <div style={{ fontSize:18, fontWeight:800, color:s.color }}>{s.val}</div>
+              <div style={{ fontSize:10, color:"#546E7A" }}>{s.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Barra de búsqueda y filtros */}
       <div style={{ display:"flex", gap:7, marginBottom:12, alignItems:"center" }}>
         <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="🔍 Buscar cliente..." style={{ ...SI, flex:1, padding:"6px 11px", fontSize:11 }}/>
+          placeholder="🔍 Buscar por nombre, email, móvil o # cliente..." style={{ ...SI, flex:1, padding:"6px 11px", fontSize:11 }}/>
+        {/* Filtro tipo */}
+        <div style={{ display:"flex", background:"#F1F5F9", borderRadius:7, padding:3, gap:2 }}>
+          {[{v:"todos",l:"Todos"},{v:"persona",l:"👤 Personas"},{v:"empresa",l:"🏢 Empresas"}].map(t=>(
+            <button key={t.v} onClick={()=>setFiltroTipo(t.v)}
+              style={{ padding:"4px 10px", borderRadius:5, border:"none", background:filtroTipo===t.v?"#fff":"transparent", color:filtroTipo===t.v?B.dark:"#546E7A", fontWeight:filtroTipo===t.v?700:400, fontSize:11, cursor:"pointer", fontFamily:"inherit" }}>
+              {t.l}
+            </button>
+          ))}
+        </div>
         <Btn v="teal" onClick={onNew}>+ Nuevo Cliente</Btn>
       </div>
+
       <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, overflowX:"auto" }}>
         <table style={{ width:"100%", borderCollapse:"collapse", fontSize:10 }}>
           <thead>
             <tr style={{ background:B.dark, color:"#fff" }}>
-              {["Nombre","Email","Móvil","Categoría","Agente","Ciudad","Registrado",""].map(h => (
+              {["#","Tipo","Nombre / Razón Social","Email","Móvil","Categoría","Agente","Ciudad",""].map(h => (
                 <th key={h} style={{ padding:"7px 9px", textAlign:"left", fontSize:9, fontWeight:700 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtered.map((c,i) => {
-              const adv  = ADVISORS.find(a => a.id===c.advisorId);
-              const name = `${c.firstName} ${c.lastNameP}${c.lastNameM?" "+c.lastNameM:""}`.trim();
+              const adv     = ADVISORS.find(a => a.id===c.advisorId);
+              const isEmp   = c.tipo === "empresa";
+              const name    = isEmp ? (c.razonSocial||"Sin nombre") : `${c.firstName} ${c.lastNameP}${c.lastNameM?" "+c.lastNameM:""}`.trim();
+              // Alertas de documentos
+              const hasPassAlert = c.passport?.vencimiento && (() => {
+                const v = new Date(c.passport.vencimiento);
+                const s = new Date(); s.setMonth(s.getMonth()+6);
+                return v < s;
+              })();
               return (
                 <tr key={c.id}
                   style={{ background:i%2===0?"#fff":"#FAFAFA", borderBottom:"1px solid #F0F0F0", cursor:"pointer" }}
                   onMouseEnter={e => e.currentTarget.style.background="#E3F2FD"}
                   onMouseLeave={e => e.currentTarget.style.background=i%2===0?"#fff":"#FAFAFA"}
                   onClick={() => onSelect(c)}>
-                  <td style={{ padding:"7px 9px", fontWeight:600, color:B.blue }}>{name||"–"}</td>
+                  <td style={{ padding:"7px 9px", fontWeight:700, color:"#7C3AED", fontSize:10 }}>
+                    {c.clientNo ? `#${c.clientNo}` : "–"}
+                  </td>
+                  <td style={{ padding:"7px 9px" }}>
+                    <span style={{ fontSize:14 }}>{isEmp?"🏢":"👤"}</span>
+                  </td>
+                  <td style={{ padding:"7px 9px", fontWeight:600, color:B.blue }}>
+                    {name||"–"}
+                    {hasPassAlert && <span style={{ marginLeft:5, fontSize:9, background:"#FFF8E1", color:"#F9A825", padding:"1px 5px", borderRadius:3, fontWeight:700 }}>🔔 Docs</span>}
+                  </td>
                   <td style={{ padding:"7px 9px", color:"#546E7A" }}>{c.email||"–"}</td>
                   <td style={{ padding:"7px 9px" }}>{c.mobile||"–"}</td>
                   <td style={{ padding:"7px 9px" }}>
@@ -1424,7 +1731,6 @@ function CliList({ clients, onSelect, onNew }) {
                   </td>
                   <td style={{ padding:"7px 9px", color:"#546E7A" }}>{adv?.name||"–"}</td>
                   <td style={{ padding:"7px 9px", color:"#546E7A" }}>{c.city||"–"}</td>
-                  <td style={{ padding:"7px 9px", color:"#546E7A" }}>{c.created||"–"}</td>
                   <td style={{ padding:"7px 9px" }}><Btn v="secondary" sz="sm" onClick={ev => { ev.stopPropagation(); onSelect(c); }}>Ver</Btn></td>
                 </tr>
               );
@@ -2121,25 +2427,29 @@ function GruposList({ grupos, expedientes, onSelect, onNew }) {
 }
 
 // ─── FASE 2: CUENTAS X COBRAR ─────────────────────────────────────────────────
-function CuentasXCobrar({ expedientes, clients }) {
+function CuentasXCobrar({ expedientes, clients, onGoToExp }) {
   const [tab, setTab] = useState("clientes");
   const TABS = [{ id:"clientes", label:"Clientes" }, { id:"comisiones", label:"Comisiones" }];
 
-  // pending balances per expediente
+  // Filas con desglose completo por expediente
   const rows = expedientes.map(e => {
-    const pub  = e.items.reduce((s,it)=>{const p=(parseFloat(it.base)||0)+(parseFloat(it.iva)||0)+(parseFloat(it.tua)||0)+(parseFloat(it.others)||0);return s+p;},0);
-    const paid = e.payments.filter(p=>p.confirmed).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
-    const saldo = pub - paid;
-    const neta  = e.items.reduce((s,it)=>{const p=(parseFloat(it.base)||0)+(parseFloat(it.iva)||0)+(parseFloat(it.tua)||0)+(parseFloat(it.others)||0);return s+p*(1-(parseFloat(it.csb)||0)/100);},0);
-    const com   = pub - neta;
-    const adv   = ADVISORS.find(a=>a.id===e.advisorId);
-    return { ...e, pub, paid, saldo, neta, com, adv };
-  }).filter(r => r.saldo > 0).sort((a,b) => b.saldo - a.saldo);
+    const pub       = e.items.reduce((s,it)=>{const p=(parseFloat(it.base)||0)+(parseFloat(it.iva)||0)+(parseFloat(it.tua)||0)+(parseFloat(it.others)||0);return s+p;},0);
+    const paid      = e.payments.filter(p=>p.confirmed).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+    const saldo     = pub - paid;
+    const neta      = e.items.reduce((s,it)=>{const p=(parseFloat(it.base)||0)+(parseFloat(it.iva)||0)+(parseFloat(it.tua)||0)+(parseFloat(it.others)||0);return s+p*(1-(parseFloat(it.csb)||0)/100);},0);
+    const com       = pub - neta;
+    // Pagos a proveedores en este expediente
+    const pagoProv  = e.majorPayments.filter(p=>p.confirmed).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+    const adv       = ADVISORS.find(a=>a.id===e.advisorId);
+    return { ...e, pub, paid, saldo, neta, com, pagoProv, adv };
+  }).filter(r => r.pub > 0).sort((a,b) => b.saldo - a.saldo);
 
-  const totalSaldo = rows.reduce((s,r) => s+r.saldo, 0);
-  const totalPub   = rows.reduce((s,r) => s+r.pub,   0);
+  const totalSaldo   = rows.reduce((s,r) => s+r.saldo,    0);
+  const totalPub     = rows.reduce((s,r) => s+r.pub,      0);
+  const totalPaid    = rows.reduce((s,r) => s+r.paid,     0);
+  const totalPagoProv= rows.reduce((s,r) => s+r.pagoProv, 0);
+  const totalSaldoProv = rows.reduce((s,r) => s+(r.neta - r.pagoProv), 0);
 
-  // commissions: items with csb > 0 not yet paid by major
   const comRows = expedientes.flatMap(e =>
     e.items.filter(it=>(parseFloat(it.csb)||0)>0).map(it=>{
       const pub=(parseFloat(it.base)||0)+(parseFloat(it.iva)||0)+(parseFloat(it.tua)||0)+(parseFloat(it.others)||0);
@@ -2148,7 +2458,7 @@ function CuentasXCobrar({ expedientes, clients }) {
       const wh=WHOLESALERS.find(w=>w.id===it.wholesalerId)||WHOLESALERS[0];
       const adv=ADVISORS.find(a=>a.id===e.advisorId);
       const majPaid=e.majorPayments.filter(p=>p.confirmed).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
-      return { id:it.id, expNo:e.no, clientName:e.clientName, concept:it.concept, wh:wh.name, pub, neta, com, pct:it.csb, adv, majPaid, status:e.status };
+      return { id:it.id, expNo:e.no, expId:e.id, clientName:e.clientName, concept:it.concept, wh:wh.name, pub, neta, com, pct:it.csb, adv, majPaid, status:e.status };
     })
   ).filter(r=>r.com>0);
   const totalCom = comRows.reduce((s,r) => s+r.com, 0);
@@ -2157,18 +2467,22 @@ function CuentasXCobrar({ expedientes, clients }) {
   const tdS = { padding:"6px 8px", fontSize:10, borderBottom:"1px solid #F0F0F0" };
 
   return (
-    <div style={{ padding:18, maxWidth:1100, margin:"0 auto" }}>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:14 }}>
+    <div style={{ padding:18, maxWidth:1200, margin:"0 auto" }}>
+
+      {/* STATS — 5 tarjetas */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:10, marginBottom:14 }}>
         {[
-          { label:"Saldo total por cobrar", value:`$${fmt(totalSaldo)}`, color:B.red,   icon:"💳" },
-          { label:"Venta total implicada",  value:`$${fmt(totalPub)}`,   color:B.blue,  icon:"💰" },
-          { label:"Comisiones por cobrar",  value:`$${fmt(totalCom)}`,   color:B.gold,  icon:"📈" },
+          { label:"Venta total",           value:`$${fmt(totalPub)}`,      color:B.blue,  icon:"💰", hint:"Precio público de todos los expedientes" },
+          { label:"Cobrado al cliente",    value:`$${fmt(totalPaid)}`,     color:B.green, icon:"✅", hint:"Pagos confirmados del cliente" },
+          { label:"Saldo por cobrar",      value:`$${fmt(totalSaldo)}`,    color:B.red,   icon:"💳", hint:"Lo que el cliente aún debe" },
+          { label:"Pagado a proveedores",  value:`$${fmt(totalPagoProv)}`, color:B.teal,  icon:"💸", hint:"Pagos confirmados a mayoristas" },
+          { label:"Saldo a proveedores",   value:`$${fmt(totalSaldoProv < 0 ? 0 : totalSaldoProv)}`, color:B.gold, icon:"⏳", hint:"Neto pendiente de pagar a mayoristas" },
         ].map(s=>(
-          <div key={s.label} style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:7, padding:14, display:"flex", gap:10, alignItems:"center" }}>
-            <div style={{ fontSize:28 }}>{s.icon}</div>
+          <div key={s.label} title={s.hint} style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:7, padding:"10px 12px", display:"flex", gap:8, alignItems:"center", cursor:"default" }}>
+            <div style={{ fontSize:22 }}>{s.icon}</div>
             <div>
-              <div style={{ fontSize:9, color:"#546E7A" }}>{s.label}</div>
-              <div style={{ fontSize:20, fontWeight:900, color:s.color }}>{s.value}</div>
+              <div style={{ fontSize:8, color:"#90A4AE", textTransform:"uppercase", letterSpacing:.5 }}>{s.label}</div>
+              <div style={{ fontSize:16, fontWeight:900, color:s.color }}>{s.value}</div>
             </div>
           </div>
         ))}
@@ -2180,7 +2494,7 @@ function CuentasXCobrar({ expedientes, clients }) {
         <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, overflowX:"auto" }}>
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:10 }}>
             <thead><tr style={{ background:"#F5F7FA" }}>
-              {["No.Exp.","Cliente","Agente","Destino","Estatus","Venta","Cobrado","Saldo","Próximo pago",""].map(h=>(
+              {["No.Exp.","Cliente","Agente","Destino","Estatus","Venta total","Cobrado cliente","Saldo cliente","Pagado proveed.","Saldo proveed.","Próx. pago",""].map(h=>(
                 <th key={h} style={thS}>{h}</th>
               ))}
             </tr></thead>
@@ -2188,31 +2502,54 @@ function CuentasXCobrar({ expedientes, clients }) {
               {rows.map((r,i)=>{
                 const st=EXP_STATUS[r.status]||EXP_STATUS.nuevo;
                 const nextPay=r.payments.filter(p=>!p.confirmed)[0];
+                const saldoProv = Math.max(0, r.neta - r.pagoProv);
+                const isUrgent = nextPay && new Date(nextPay.date) <= new Date(Date.now()+3*86400000);
                 return (
                   <tr key={r.id} style={{ background:i%2===0?"#fff":"#FAFAFA" }}>
-                    <td style={{ ...tdS, color:B.blue, fontWeight:700 }}>{r.no}</td>
+                    <td style={{ ...tdS }}>
+                      <span style={{ color:B.blue, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}
+                        onClick={()=>onGoToExp&&onGoToExp(r.id)}>
+                        {r.no}
+                      </span>
+                    </td>
                     <td style={{ ...tdS, fontWeight:600 }}>{r.clientName||"–"}</td>
                     <td style={tdS}>{r.adv?.name.split(" ")[0]||"–"}</td>
                     <td style={tdS}>{r.trip?.destination||"–"}</td>
-                    <td style={tdS}><span style={{ background:st.bg, color:st.c, padding:"2px 6px", borderRadius:6, fontSize:9, fontWeight:700 }}>{st.label}</span></td>
+                    <td style={tdS}>
+                      <span style={{ background:st.bg, color:st.c, padding:"2px 6px", borderRadius:6, fontSize:9, fontWeight:700 }}>{st.label}</span>
+                    </td>
                     <td style={{ ...tdS, color:B.blue, fontWeight:700 }}>${fmt(r.pub)}</td>
-                    <td style={{ ...tdS, color:B.green }}>${fmt(r.paid)}</td>
-                    <td style={{ ...tdS, color:B.red, fontWeight:700 }}>${fmt(r.saldo)}</td>
-                    <td style={tdS}>{nextPay ? nextPay.date : "–"}</td>
-                    <td style={tdS}><Btn v="primary" sz="sm">💳 Cobrar</Btn></td>
+                    <td style={{ ...tdS, color:B.green, fontWeight:600 }}>${fmt(r.paid)}</td>
+                    <td style={{ ...tdS, color:r.saldo>0?B.red:"#546E7A", fontWeight:r.saldo>0?700:400 }}>
+                      {r.saldo>0?`$${fmt(r.saldo)}`:"✅ Al día"}
+                    </td>
+                    <td style={{ ...tdS, color:B.teal, fontWeight:600 }}>${fmt(r.pagoProv)}</td>
+                    <td style={{ ...tdS, color:saldoProv>0?B.gold:"#546E7A", fontWeight:saldoProv>0?700:400 }}>
+                      {saldoProv>0?`$${fmt(saldoProv)}`:"✅ Pagado"}
+                    </td>
+                    <td style={{ ...tdS, color:isUrgent?B.red:"#546E7A", fontWeight:isUrgent?700:400 }}>
+                      {nextPay ? (
+                        <span>{nextPay.date}{isUrgent&&" ⚠️"}</span>
+                      ) : "–"}
+                    </td>
+                    <td style={tdS}>
+                      <Btn v="primary" sz="sm">💳 Cobrar</Btn>
+                    </td>
                   </tr>
                 );
               })}
               {rows.length===0&&(
-                <tr><td colSpan={10} style={{ textAlign:"center", padding:30, color:"#B0BEC5", fontSize:11 }}>✅ Sin saldos pendientes por cobrar.</td></tr>
+                <tr><td colSpan={12} style={{ textAlign:"center", padding:30, color:"#B0BEC5", fontSize:11 }}>✅ Sin expedientes.</td></tr>
               )}
             </tbody>
             {rows.length>0&&(
               <tfoot><tr style={{ background:"#F5F7FA", fontWeight:700 }}>
-                <td colSpan={5} style={{ padding:"6px 8px", fontSize:10, textAlign:"right", color:"#546E7A" }}>TOTALES:</td>
+                <td colSpan={5} style={{ padding:"6px 8px", fontSize:10, textAlign:"right", color:"#546E7A" }}>TOTALES →</td>
                 <td style={{ padding:"6px 8px", color:B.blue }}>${fmt(totalPub)}</td>
-                <td style={{ padding:"6px 8px", color:B.green }}>${fmt(rows.reduce((s,r)=>s+r.paid,0))}</td>
-                <td style={{ padding:"6px 8px", color:B.red, fontWeight:900 }}>${fmt(totalSaldo)}</td>
+                <td style={{ padding:"6px 8px", color:B.green }}>${fmt(totalPaid)}</td>
+                <td style={{ padding:"6px 8px", color:B.red, fontSize:12 }}>${fmt(totalSaldo)}</td>
+                <td style={{ padding:"6px 8px", color:B.teal }}>${fmt(totalPagoProv)}</td>
+                <td style={{ padding:"6px 8px", color:B.gold, fontSize:12 }}>${fmt(Math.max(0,totalSaldoProv))}</td>
                 <td colSpan={2}/>
               </tr></tfoot>
             )}
@@ -2231,7 +2568,10 @@ function CuentasXCobrar({ expedientes, clients }) {
             <tbody>
               {comRows.map((r,i)=>(
                 <tr key={r.id} style={{ background:i%2===0?"#fff":"#FAFAFA" }}>
-                  <td style={{ ...tdS, color:B.blue, fontWeight:700 }}>{r.expNo}</td>
+                  <td style={{ ...tdS }}>
+                    <span style={{ color:B.blue, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}
+                      onClick={()=>onGoToExp&&onGoToExp(r.expId)}>{r.expNo}</span>
+                  </td>
                   <td style={{ ...tdS, fontWeight:600 }}>{r.clientName||"–"}</td>
                   <td style={tdS}>{r.concept}</td>
                   <td style={tdS}>{r.wh}</td>
@@ -2241,7 +2581,9 @@ function CuentasXCobrar({ expedientes, clients }) {
                   <td style={{ ...tdS, color:B.gold, fontWeight:700 }}>${fmt(r.com)}</td>
                   <td style={tdS}>{r.pct}%</td>
                   <td style={{ ...tdS, color:B.green }}>${fmt(r.majPaid)}</td>
-                  <td style={tdS}><span style={{ background:"#FFF8E1", color:B.gold, padding:"2px 6px", borderRadius:6, fontSize:9, fontWeight:700 }}>Pendiente</span></td>
+                  <td style={tdS}>
+                    <span style={{ background:"#FFF8E1", color:B.gold, padding:"2px 6px", borderRadius:6, fontSize:9, fontWeight:700 }}>Pendiente</span>
+                  </td>
                 </tr>
               ))}
               {comRows.length===0&&(
@@ -2263,43 +2605,51 @@ function CuentasXCobrar({ expedientes, clients }) {
 }
 
 // ─── FASE 2: CUENTAS X PAGAR ──────────────────────────────────────────────────
-function CuentasXPagar({ expedientes }) {
+function CuentasXPagar({ expedientes, onGoToExp }) {
   const [tab, setTab] = useState("mayoristas");
   const TABS = [{ id:"mayoristas", label:"Mayoristas" }, { id:"gastos", label:"Gastos" }];
 
   const rows = expedientes.flatMap(e =>
     e.items.map(it => {
-      const pub  = (parseFloat(it.base)||0)+(parseFloat(it.iva)||0)+(parseFloat(it.tua)||0)+(parseFloat(it.others)||0);
-      const neta = pub*(1-(parseFloat(it.csb)||0)/100);
-      const com  = pub-neta;
-      const paid = e.majorPayments.filter(p=>p.confirmed).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
-      const pending = neta - paid;
-      const wh   = WHOLESALERS.find(w=>w.id===it.wholesalerId)||WHOLESALERS[0];
-      const adv  = ADVISORS.find(a=>a.id===e.advisorId);
-      return { id:it.id, expNo:e.no, clientName:e.clientName, concept:it.concept, wh, adv, pub, neta, com, paid, pending, limit:it.dateTo, status:e.status };
+      const pub     = (parseFloat(it.base)||0)+(parseFloat(it.iva)||0)+(parseFloat(it.tua)||0)+(parseFloat(it.others)||0);
+      const neta    = pub*(1-(parseFloat(it.csb)||0)/100);
+      const com     = pub-neta;
+      // Pagos del cliente para este expediente
+      const cliPaid = e.payments.filter(p=>p.confirmed).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+      const majPaid = e.majorPayments.filter(p=>p.confirmed).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+      const pending = Math.max(0, neta - majPaid);
+      const wh      = WHOLESALERS.find(w=>w.id===it.wholesalerId)||WHOLESALERS[0];
+      const adv     = ADVISORS.find(a=>a.id===e.advisorId);
+      return { id:it.id, expId:e.id, expNo:e.no, clientName:e.clientName, concept:it.concept, wh, adv, pub, neta, com, cliPaid, majPaid, pending, limit:it.dateTo, status:e.status };
     })
-  ).filter(r => r.pending > 0).sort((a,b) => (a.limit||"9999").localeCompare(b.limit||"9999"));
+  ).filter(r => r.neta > 0).sort((a,b) => (a.limit||"9999").localeCompare(b.limit||"9999"));
 
-  const totalNeta    = rows.reduce((s,r) => s+r.neta, 0);
-  const totalPending = rows.reduce((s,r) => s+r.pending, 0);
-  const totalPaid    = rows.reduce((s,r) => s+r.paid, 0);
+  const totalNeta    = rows.reduce((s,r) => s+r.neta,    0);
+  const totalPending = rows.reduce((s,r) => s+r.pending,  0);
+  const totalMajPaid = rows.reduce((s,r) => s+r.majPaid,  0);
+  const totalCliPaid = rows.reduce((s,r) => s+r.cliPaid,  0);
+  const totalPub     = rows.reduce((s,r) => s+r.pub,      0);
 
   const thS = { padding:"6px 8px", fontSize:9, fontWeight:700, color:"#546E7A", textAlign:"left", whiteSpace:"nowrap" };
   const tdS = { padding:"6px 8px", fontSize:10, borderBottom:"1px solid #F0F0F0" };
 
   return (
-    <div style={{ padding:18, maxWidth:1100, margin:"0 auto" }}>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:14 }}>
+    <div style={{ padding:18, maxWidth:1200, margin:"0 auto" }}>
+
+      {/* STATS — 5 tarjetas */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:10, marginBottom:14 }}>
         {[
-          { label:"Total por pagar (neto)",   value:`$${fmt(totalNeta)}`,    color:B.red,  icon:"💸" },
-          { label:"Ya pagado a mayoristas",   value:`$${fmt(totalPaid)}`,    color:B.green,icon:"✅" },
-          { label:"Pendiente de pago",        value:`$${fmt(totalPending)}`, color:B.gold, icon:"⏳" },
+          { label:"Venta total",          value:`$${fmt(totalPub)}`,     color:B.blue,  icon:"💰" },
+          { label:"Cobrado al cliente",   value:`$${fmt(totalCliPaid)}`, color:B.green, icon:"✅" },
+          { label:"Neto a proveedores",   value:`$${fmt(totalNeta)}`,    color:B.teal,  icon:"🏦" },
+          { label:"Ya pagado proveed.",   value:`$${fmt(totalMajPaid)}`, color:B.green, icon:"💸" },
+          { label:"Pendiente proveed.",   value:`$${fmt(totalPending)}`, color:B.red,   icon:"⏳" },
         ].map(s=>(
-          <div key={s.label} style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:7, padding:14, display:"flex", gap:10, alignItems:"center" }}>
-            <div style={{ fontSize:28 }}>{s.icon}</div>
+          <div key={s.label} style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:7, padding:"10px 12px", display:"flex", gap:8, alignItems:"center" }}>
+            <div style={{ fontSize:22 }}>{s.icon}</div>
             <div>
-              <div style={{ fontSize:9, color:"#546E7A" }}>{s.label}</div>
-              <div style={{ fontSize:20, fontWeight:900, color:s.color }}>{s.value}</div>
+              <div style={{ fontSize:8, color:"#90A4AE", textTransform:"uppercase", letterSpacing:.5 }}>{s.label}</div>
+              <div style={{ fontSize:16, fontWeight:900, color:s.color }}>{s.value}</div>
             </div>
           </div>
         ))}
@@ -2311,41 +2661,50 @@ function CuentasXPagar({ expedientes }) {
         <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, overflowX:"auto" }}>
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:10 }}>
             <thead><tr style={{ background:"#F5F7FA" }}>
-              {["No.Exp.","Cliente","Concepto","Mayorista","Agente","Pública","Neta","Comisión","Pagado","Pendiente","Límite",""].map(h=>(
+              {["No.Exp.","Cliente","Concepto","Proveedor","Agente","Venta","Cobrado cliente","Neto proveed.","Pagado proveed.","Pendiente proveed.","Límite pago",""].map(h=>(
                 <th key={h} style={thS}>{h}</th>
               ))}
             </tr></thead>
             <tbody>
               {rows.map((r,i)=>{
-                const isUrgent = r.limit && new Date(r.limit) <= new Date(Date.now()+5*86400000);
+                const isUrgent  = r.limit && new Date(r.limit) <= new Date(Date.now()+5*86400000);
+                const isOverdue = r.limit && new Date(r.limit) < new Date();
                 return (
-                  <tr key={r.id} style={{ background: isUrgent?"#FFFDE7":i%2===0?"#fff":"#FAFAFA" }}>
-                    <td style={{ ...tdS, color:B.blue, fontWeight:700 }}>{r.expNo}</td>
+                  <tr key={r.id} style={{ background: isOverdue?"#FFEBEE":isUrgent?"#FFFDE7":i%2===0?"#fff":"#FAFAFA" }}>
+                    <td style={tdS}>
+                      <span style={{ color:B.blue, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}
+                        onClick={()=>onGoToExp&&onGoToExp(r.expId)}>{r.expNo}</span>
+                    </td>
                     <td style={{ ...tdS, fontWeight:600 }}>{r.clientName||"–"}</td>
                     <td style={tdS}>{r.concept}</td>
                     <td style={{ ...tdS, fontWeight:600 }}>{r.wh.name}</td>
                     <td style={tdS}>{r.adv?.name.split(" ")[0]||"–"}</td>
-                    <td style={{ ...tdS, color:B.blue }}>${fmt(r.pub)}</td>
+                    <td style={{ ...tdS, color:B.blue, fontWeight:600 }}>${fmt(r.pub)}</td>
+                    <td style={{ ...tdS, color:B.green }}>${fmt(r.cliPaid)}</td>
                     <td style={{ ...tdS, color:B.teal, fontWeight:700 }}>${fmt(r.neta)}</td>
-                    <td style={{ ...tdS, color:B.gold }}>${fmt(r.com)}</td>
-                    <td style={{ ...tdS, color:B.green }}>${fmt(r.paid)}</td>
-                    <td style={{ ...tdS, color:B.red, fontWeight:700 }}>${fmt(r.pending)}</td>
-                    <td style={{ ...tdS, color:isUrgent?B.red:"#546E7A", fontWeight:isUrgent?700:400 }}>{r.limit||"–"}</td>
+                    <td style={{ ...tdS, color:B.green }}>${fmt(r.majPaid)}</td>
+                    <td style={{ ...tdS, color:r.pending>0?B.red:"#546E7A", fontWeight:r.pending>0?700:400 }}>
+                      {r.pending>0?`$${fmt(r.pending)}`:"✅ Pagado"}
+                    </td>
+                    <td style={{ ...tdS, color:isOverdue?"#C62828":isUrgent?B.red:"#546E7A", fontWeight:isUrgent||isOverdue?700:400 }}>
+                      {r.limit||(isOverdue?"⚠️ Vencido":"–")}
+                      {isOverdue&&" ⚠️"}
+                    </td>
                     <td style={tdS}><Btn v="gold" sz="sm">💸 Pagar</Btn></td>
                   </tr>
                 );
               })}
               {rows.length===0&&(
-                <tr><td colSpan={12} style={{ textAlign:"center", padding:30, color:"#B0BEC5", fontSize:11 }}>✅ Sin pagos pendientes a mayoristas.</td></tr>
+                <tr><td colSpan={12} style={{ textAlign:"center", padding:30, color:"#B0BEC5", fontSize:11 }}>✅ Sin pagos pendientes a proveedores.</td></tr>
               )}
             </tbody>
             {rows.length>0&&(
               <tfoot><tr style={{ background:"#F5F7FA", fontWeight:700 }}>
-                <td colSpan={5} style={{ padding:"6px 8px", fontSize:10, textAlign:"right", color:"#546E7A" }}>TOTALES:</td>
-                <td style={{ padding:"6px 8px", color:B.blue }}>${fmt(rows.reduce((s,r)=>s+r.pub,0))}</td>
+                <td colSpan={5} style={{ padding:"6px 8px", fontSize:10, textAlign:"right", color:"#546E7A" }}>TOTALES →</td>
+                <td style={{ padding:"6px 8px", color:B.blue }}>${fmt(totalPub)}</td>
+                <td style={{ padding:"6px 8px", color:B.green }}>${fmt(totalCliPaid)}</td>
                 <td style={{ padding:"6px 8px", color:B.teal }}>${fmt(totalNeta)}</td>
-                <td style={{ padding:"6px 8px", color:B.gold }}>${fmt(rows.reduce((s,r)=>s+r.com,0))}</td>
-                <td style={{ padding:"6px 8px", color:B.green }}>${fmt(totalPaid)}</td>
+                <td style={{ padding:"6px 8px", color:B.green }}>${fmt(totalMajPaid)}</td>
                 <td style={{ padding:"6px 8px", color:B.red, fontSize:12 }}>${fmt(totalPending)}</td>
                 <td colSpan={2}/>
               </tr></tfoot>
@@ -2495,125 +2854,248 @@ function ReporteComisiones({ expedientes }) {
 
 // ─── FASE 2: CATÁLOGO BACK OFFICE ─────────────────────────────────────────────
 function CatalogoBackOffice() {
-  const [products, setProducts] = useState(CATALOG_PRODUCTS.map(p=>({...p})));
-  const [editing,  setEditing]  = useState(null);
-  const [search,   setSearch]   = useState("");
-  const [fCat,     setFCat]     = useState("all");
-  const [toast,    setToast]    = useState("");
+  const [tab, setTab] = useState("mayoristas");
+  const [proveedores, setProveedores] = useState(WHOLESALERS_SEED.map(p=>({...p})));
+  const [products,  setProducts]  = useState(CATALOG_PRODUCTS.map(p=>({...p})));
+  const [editProv,  setEditProv]  = useState(null);
+  const [editProd,  setEditProd]  = useState(null);
+  const [search,    setSearch]    = useState("");
+  const [toast,     setToast]     = useState("");
 
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(""),2500); };
-  const cats = ["all",...new Set(products.map(p=>p.concept))];
-  const filtered = products.filter(p =>
-    (fCat==="all"||p.concept===fCat) &&
-    (!search||p.name.toLowerCase().includes(search.toLowerCase())||p.concept.toLowerCase().includes(search.toLowerCase()))
+
+  const TABS = [
+    { id:"mayoristas", label:"🏢 Mayoristas",  count: proveedores.filter(p=>p.tipo==="mayorista").length },
+    { id:"aerolineas", label:"✈️ Aerolíneas",  count: proveedores.filter(p=>p.tipo==="aerolinea").length },
+    { id:"hoteles",    label:"🏨 Hoteles",      count: proveedores.filter(p=>p.tipo==="hotel").length },
+    { id:"productos",  label:"📦 Productos",    count: products.length },
+  ];
+
+  const PROV_EMPTY = (tipo) => ({
+    id:uid(), name:"", code:"", tipo, pais:"", contacto:"",
+    email:"", phone:"", web:"", notas:"",
+  });
+
+  const saveProv = p => {
+    setProveedores(prev => prev.find(x=>x.id===p.id) ? prev.map(x=>x.id===p.id?p:x) : [...prev,p]);
+    setEditProv(null); showToast("Guardado correctamente");
+  };
+  const delProv = id => { setProveedores(p=>p.filter(x=>x.id!==id)); showToast("Eliminado"); };
+
+  const saveProd = p => {
+    setProducts(prev=>{ const i=prev.findIndex(x=>x.id===p.id); if(i>=0){const n=[...prev];n[i]=p;return n;} return[p,...prev]; });
+    setEditProd(null); showToast("Producto guardado");
+  };
+  const delProd = id => { setProducts(p=>p.filter(x=>x.id!==id)); showToast("Producto eliminado"); };
+
+  const tipoMap = { mayoristas:"mayorista", aerolineas:"aerolinea", hoteles:"hotel" };
+  const filtProv = proveedores.filter(p =>
+    p.tipo === tipoMap[tab] &&
+    (!search || p.name.toLowerCase().includes(search.toLowerCase()) || (p.code||"").toLowerCase().includes(search.toLowerCase()))
+  );
+  const filtProd = products.filter(p =>
+    !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.concept.toLowerCase().includes(search.toLowerCase())
   );
 
-  const save = p => {
-    setProducts(prev=>{ const i=prev.findIndex(x=>x.id===p.id); if(i>=0){const n=[...prev];n[i]=p;return n;} return[p,...prev]; });
-    setEditing(null); showToast("Producto guardado");
-  };
-  const del = id => { setProducts(prev=>prev.filter(p=>p.id!==id)); showToast("Producto eliminado"); };
-  const newProd = () => setEditing({ id:uid(), concept:"HOTELES NACIONALES", wholesalerId:"bbr", name:"", description:"", base:0, iva:0, tua:0, others:0, csb:18, currency:"USD" });
+  // ── FORM PROVEEDOR ──
+  if(editProv) {
+    const upd = (f,v) => setEditProv(p=>({...p,[f]:v}));
+    const tipoLabel = editProv.tipo==="aerolinea"?"Aerolínea":editProv.tipo==="hotel"?"Hotel":"Mayorista";
+    return (
+      <div style={{ padding:18, maxWidth:700, margin:"0 auto" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+          <h2 style={{ margin:0, fontSize:16, fontWeight:800, color:B.dark }}>
+            {editProv.name || `Nuevo ${tipoLabel}`}
+          </h2>
+          <div style={{ display:"flex", gap:6 }}>
+            <Btn v="primary" sz="sm" onClick={()=>saveProv(editProv)}>💾 Guardar</Btn>
+            <Btn v="secondary" sz="sm" onClick={()=>setEditProv(null)}>← Cancelar</Btn>
+          </div>
+        </div>
+        <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:8, padding:20 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:12, marginBottom:12 }}>
+            <FI label={`Nombre del ${tipoLabel} *`} value={editProv.name} onChange={v=>upd("name",v)} placeholder={`Nombre completo...`}/>
+            <FI label="Código / IATA" value={editProv.code||""} onChange={v=>upd("code",v.toUpperCase())} placeholder="BBR, AF, HG..."/>
+            <FI label="País" value={editProv.pais||""} onChange={v=>upd("pais",v)} placeholder="Panama, USA..."/>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+            <FI label="Email de contacto" value={editProv.email||""} onChange={v=>upd("email",v)} placeholder="contacto@proveedor.com"/>
+            <FI label="Teléfono" value={editProv.phone||""} onChange={v=>upd("phone",v)} placeholder="+1 800-000-0000"/>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+            <FI label="Persona de contacto" value={editProv.contacto||""} onChange={v=>upd("contacto",v)} placeholder="Nombre del ejecutivo de cuenta"/>
+            <FI label="Sitio web" value={editProv.web||""} onChange={v=>upd("web",v)} placeholder="www.proveedor.com"/>
+          </div>
+          <FTA label="Notas internas" value={editProv.notas||""} onChange={v=>upd("notas",v)} rows={3}
+            placeholder="Condiciones especiales, comisiones acordadas, notas del contrato..."/>
+        </div>
+      </div>
+    );
+  }
 
-  const thS = { padding:"6px 9px", fontSize:9, fontWeight:700, color:"#546E7A", textAlign:"left" };
-
-  if (editing) {
-    const pub=(parseFloat(editing.base)||0)+(parseFloat(editing.iva)||0)+(parseFloat(editing.tua)||0)+(parseFloat(editing.others)||0);
-    const neta=pub*(1-(parseFloat(editing.csb)||0)/100);
-    const upd=(f,v)=>setEditing(p=>({...p,[f]:v}));
+  // ── FORM PRODUCTO ──
+  if(editProd) {
+    const pub=(parseFloat(editProd.base)||0)+(parseFloat(editProd.iva)||0)+(parseFloat(editProd.tua)||0)+(parseFloat(editProd.others)||0);
+    const neta=pub*(1-(parseFloat(editProd.csb)||0)/100);
+    const upd=(f,v)=>setEditProd(p=>({...p,[f]:v}));
     return (
       <div style={{ padding:18, maxWidth:900, margin:"0 auto" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-          <h2 style={{ margin:0, fontSize:16, color:B.dark, fontWeight:800 }}>{editing.name||"Nuevo producto/servicio"}</h2>
+          <h2 style={{ margin:0, fontSize:16, color:B.dark, fontWeight:800 }}>{editProd.name||"Nuevo producto/servicio"}</h2>
           <div style={{ display:"flex", gap:6 }}>
-            <Btn v="primary" sz="sm" onClick={()=>save(editing)}>💾 Guardar</Btn>
-            <Btn v="secondary" sz="sm" onClick={()=>setEditing(null)}>&larr; Cancelar</Btn>
+            <Btn v="primary" sz="sm" onClick={()=>saveProd(editProd)}>💾 Guardar</Btn>
+            <Btn v="secondary" sz="sm" onClick={()=>setEditProd(null)}>← Cancelar</Btn>
           </div>
         </div>
         <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:7, padding:16 }}>
           <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:10, marginBottom:10 }}>
-            <FI label="Nombre del producto/servicio *" value={editing.name} onChange={v=>upd("name",v)} placeholder="Gran Evenia Bijao — Todo Incluido"/>
-            <FS label="Concepto *" value={editing.concept} onChange={v=>upd("concept",v)} options={CONCEPTS.map(c=>({value:c,label:c}))}/>
-            <FS label="Mayorista *" value={editing.wholesalerId} onChange={v=>upd("wholesalerId",v)} options={WHOLESALERS.map(w=>({value:w.id,label:w.name}))}/>
+            <FI label="Nombre del producto/servicio *" value={editProd.name} onChange={v=>upd("name",v)} placeholder="Gran Evenia Bijao — Todo Incluido"/>
+            <FS label="Concepto *" value={editProd.concept} onChange={v=>upd("concept",v)} options={CONCEPTS.map(c=>({value:c,label:c}))}/>
+            <FS label="Proveedor *" value={editProd.wholesalerId} onChange={v=>upd("wholesalerId",v)} options={proveedores.map(w=>({value:w.id,label:w.name}))}/>
           </div>
-          <FTA label="Descripción" value={editing.description} onChange={v=>upd("description",v)} rows={5}
-            placeholder="Descripción detallada del servicio que aparecerá auto-rellenada en las partidas de venta..."/>
+          <FTA label="Descripción" value={editProd.description} onChange={v=>upd("description",v)} rows={5}
+            placeholder="Descripción detallada del servicio..."/>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:9, marginTop:10 }}>
-            <FI label="Base"   value={String(editing.base)}   onChange={v=>upd("base",  parseFloat(v)||0)} type="number"/>
-            <FI label="IVA $"  value={String(editing.iva)}    onChange={v=>upd("iva",   parseFloat(v)||0)} type="number"/>
-            <FI label="TUA"    value={String(editing.tua)}    onChange={v=>upd("tua",   parseFloat(v)||0)} type="number"/>
-            <FI label="Otros"  value={String(editing.others)} onChange={v=>upd("others",parseFloat(v)||0)} type="number"/>
-            <FI label="CSB %"  value={String(editing.csb)}    onChange={v=>upd("csb",   parseFloat(v)||0)} type="number"/>
-            <FS label="Divisa" value={editing.currency}        onChange={v=>upd("currency",v)} options={CURRENCIES.map(c=>({value:c,label:c}))}/>
+            <FI label="Base"   value={String(editProd.base)}   onChange={v=>upd("base",  parseFloat(v)||0)} type="number"/>
+            <FI label="IVA $"  value={String(editProd.iva)}    onChange={v=>upd("iva",   parseFloat(v)||0)} type="number"/>
+            <FI label="TUA"    value={String(editProd.tua)}    onChange={v=>upd("tua",   parseFloat(v)||0)} type="number"/>
+            <FI label="Otros"  value={String(editProd.others)} onChange={v=>upd("others",parseFloat(v)||0)} type="number"/>
+            <FI label="CSB %"  value={String(editProd.csb)}    onChange={v=>upd("csb",   parseFloat(v)||0)} type="number"/>
+            <FS label="Divisa" value={editProd.currency}       onChange={v=>upd("currency",v)} options={CURRENCIES.map(c=>({value:c,label:c}))}/>
           </div>
           <div style={{ display:"flex", gap:14, marginTop:9, padding:"9px 12px", background:"#F0F4FF", borderRadius:6, fontSize:11 }}>
             <span>Precio público: <b style={{ color:B.blue, fontSize:14 }}>${fmt(pub)}</b></span>
             <span>Precio neto: <b style={{ color:B.teal }}>${fmt(neta)}</b></span>
-            <span>Comisión CSB: <b style={{ color:B.gold }}>${fmt(pub-neta)} ({editing.csb||0}%)</b></span>
+            <span>Comisión CSB: <b style={{ color:B.gold }}>${fmt(pub-neta)} ({editProd.csb||0}%)</b></span>
           </div>
         </div>
       </div>
     );
   }
 
+  // ── LISTA PRINCIPAL ──
+  const tipoLabel = tab==="mayoristas"?"Mayorista":tab==="aerolineas"?"Aerolínea":"Hotel";
+  const tipoIcon  = tab==="mayoristas"?"🏢":tab==="aerolineas"?"✈️":"🏨";
+
   return (
     <div style={{ padding:18, maxWidth:1100, margin:"0 auto" }}>
       {toast&&<div style={{ position:"fixed", top:55, right:16, zIndex:9999, background:B.green, color:"#fff", borderRadius:6, padding:"8px 14px", fontSize:11, fontWeight:700 }}>✅ {toast}</div>}
-      <div style={{ display:"flex", gap:8, marginBottom:12, alignItems:"center", flexWrap:"wrap" }}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar producto o servicio..."
-          style={{ ...SI, flex:1, padding:"6px 11px", fontSize:11 }}/>
-        <select value={fCat} onChange={e=>setFCat(e.target.value)} style={{ ...SI, width:200, padding:"6px 9px", fontSize:11 }}>
-          {cats.map(c=><option key={c} value={c}>{c==="all"?"Todas las categorías":c}</option>)}
-        </select>
-        <Btn v="teal" onClick={newProd}>+ Nuevo producto</Btn>
+
+      {/* Tabs */}
+      <div style={{ display:"flex", gap:4, marginBottom:16, background:"#F1F5F9", padding:4, borderRadius:10, width:"fit-content" }}>
+        {TABS.map(t=>(
+          <button key={t.id} onClick={()=>{ setTab(t.id); setSearch(""); }}
+            style={{ padding:"7px 16px", borderRadius:7, border:"none", background:tab===t.id?"#fff":"transparent", color:tab===t.id?B.dark:"#546E7A", fontWeight:tab===t.id?700:500, fontSize:12, cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:6, boxShadow:tab===t.id?"0 1px 4px rgba(0,0,0,.08)":"none" }}>
+            {t.label}
+            <span style={{ background:tab===t.id?B.blue:"#E0E0E0", color:tab===t.id?"#fff":"#546E7A", fontSize:10, fontWeight:700, padding:"1px 6px", borderRadius:10 }}>{t.count}</span>
+          </button>
+        ))}
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:12 }}>
-        {filtered.map(p=>{
-          const pub=(parseFloat(p.base)||0)+(parseFloat(p.iva)||0)+(parseFloat(p.tua)||0)+(parseFloat(p.others)||0);
-          const neta=pub*(1-(parseFloat(p.csb)||0)/100);
-          const wh=WHOLESALERS.find(w=>w.id===p.wholesalerId)||WHOLESALERS[0];
-          return (
-            <div key={p.id} style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:8, overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,.06)" }}>
-              <div style={{ background:B.dark, color:"#fff", padding:"8px 12px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <span style={{ fontSize:9, fontWeight:700, letterSpacing:.6, textTransform:"uppercase", opacity:.8 }}>{p.concept}</span>
-                <div style={{ display:"flex", gap:5 }}>
-                  <button onClick={()=>setEditing({...p})} style={{ background:"rgba(255,255,255,.2)", border:"none", borderRadius:3, padding:"2px 7px", cursor:"pointer", color:"#fff", fontSize:9, fontFamily:"inherit" }}>✏️ Editar</button>
-                  <button onClick={()=>del(p.id)} style={{ background:"rgba(198,40,40,.4)", border:"none", borderRadius:3, padding:"2px 7px", cursor:"pointer", color:"#fff", fontSize:9, fontFamily:"inherit" }}>✕</button>
-                </div>
-              </div>
-              <div style={{ padding:"11px 13px" }}>
-                <div style={{ fontWeight:700, fontSize:12, color:"#263238", marginBottom:4 }}>{p.name}</div>
-                <div style={{ fontSize:9, color:"#546E7A", marginBottom:6 }}>{wh.name} · {p.currency}</div>
-                <div style={{ fontSize:9, color:"#90A4AE", whiteSpace:"pre-line", marginBottom:8, lineHeight:1.5 }}>
-                  {p.description.slice(0,120)}{p.description.length>120?"…":""}
-                </div>
-                <div style={{ display:"flex", gap:10, paddingTop:8, borderTop:"1px solid #F0F0F0" }}>
-                  <div style={{ textAlign:"center" }}>
-                    <div style={{ fontSize:8, color:"#546E7A" }}>PÚBLICA</div>
-                    <div style={{ fontSize:14, fontWeight:900, color:B.blue }}>${fmt(pub)}</div>
-                  </div>
-                  <div style={{ textAlign:"center" }}>
-                    <div style={{ fontSize:8, color:"#546E7A" }}>NETA</div>
-                    <div style={{ fontSize:13, fontWeight:700, color:B.teal }}>${fmt(neta)}</div>
-                  </div>
-                  <div style={{ textAlign:"center" }}>
-                    <div style={{ fontSize:8, color:"#546E7A" }}>CSB</div>
-                    <div style={{ fontSize:13, fontWeight:700, color:B.gold }}>{p.csb}%</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        {filtered.length===0&&(
-          <div style={{ gridColumn:"1/-1", textAlign:"center", padding:40, color:"#B0BEC5", fontSize:11 }}>
-            <div style={{ fontSize:32, marginBottom:8 }}>📦</div>
-            Sin productos.<br/>
-            <Btn v="outline" style={{ marginTop:10 }} onClick={newProd}>Crear primer producto</Btn>
-          </div>
+      {/* Barra de búsqueda + botón nuevo */}
+      <div style={{ display:"flex", gap:8, marginBottom:14, alignItems:"center" }}>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder={`🔍 Buscar ${tab==="productos"?"producto o servicio":tipoLabel.toLowerCase()}...`}
+          style={{ ...SI, flex:1, padding:"6px 11px", fontSize:11 }}/>
+        {tab !== "productos" ? (
+          <Btn v="teal" onClick={()=>setEditProv(PROV_EMPTY(tipoMap[tab]))}>+ Nuevo {tipoLabel}</Btn>
+        ) : (
+          <Btn v="teal" onClick={()=>setEditProd({ id:uid(), concept:"HOTELES NACIONALES", wholesalerId:proveedores[0]?.id||"other", name:"", description:"", base:0, iva:0, tua:0, others:0, csb:18, currency:"USD" })}>+ Nuevo producto</Btn>
         )}
       </div>
+
+      {/* ── TABLA PROVEEDORES (mayoristas / aerolíneas / hoteles) ── */}
+      {tab !== "productos" && (
+        <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:8, overflow:"hidden" }}>
+          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
+            <thead>
+              <tr style={{ background:B.dark, color:"#fff" }}>
+                {[tipoIcon+" Nombre","Código","País","Email","Teléfono","Contacto","Web",""].map(h=>(
+                  <th key={h} style={{ padding:"8px 10px", textAlign:"left", fontSize:9, fontWeight:700 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtProv.length===0&&(
+                <tr><td colSpan={8} style={{ textAlign:"center", padding:32, color:"#B0BEC5", fontSize:11 }}>
+                  <div style={{ fontSize:28, marginBottom:8 }}>{tipoIcon}</div>
+                  Sin {tab}. <button onClick={()=>setEditProv(PROV_EMPTY(tipoMap[tab]))} style={{ background:"none", border:"none", color:B.blue, cursor:"pointer", fontSize:11, textDecoration:"underline", fontFamily:"inherit" }}>Agregar {tipoLabel.toLowerCase()}</button>
+                </td></tr>
+              )}
+              {filtProv.map((p,i)=>(
+                <tr key={p.id} style={{ background:i%2===0?"#fff":"#FAFAFA", borderBottom:"1px solid #F0F0F0", cursor:"pointer" }}
+                  onMouseEnter={e=>e.currentTarget.style.background="#E3F2FD"}
+                  onMouseLeave={e=>e.currentTarget.style.background=i%2===0?"#fff":"#FAFAFA"}>
+                  <td style={{ padding:"9px 10px", fontWeight:700, color:B.blue }} onClick={()=>setEditProv({...p})}>{p.name}</td>
+                  <td style={{ padding:"9px 10px" }}>
+                    {p.code&&<span style={{ background:"#EDE7F6", color:"#512DA8", padding:"2px 7px", borderRadius:4, fontSize:10, fontWeight:700 }}>{p.code}</span>}
+                  </td>
+                  <td style={{ padding:"9px 10px", color:"#546E7A" }}>{p.pais||"—"}</td>
+                  <td style={{ padding:"9px 10px", color:"#546E7A", fontSize:10 }}>{p.email||"—"}</td>
+                  <td style={{ padding:"9px 10px", color:"#546E7A" }}>{p.phone||"—"}</td>
+                  <td style={{ padding:"9px 10px", color:"#546E7A" }}>{p.contacto||"—"}</td>
+                  <td style={{ padding:"9px 10px" }}>
+                    {p.web ? <a href={`https://${p.web.replace(/^https?:\/\//,"")}`} target="_blank" rel="noopener noreferrer" style={{ color:B.blue, fontSize:10, textDecoration:"none" }}>{p.web}</a> : "—"}
+                  </td>
+                  <td style={{ padding:"9px 10px", textAlign:"center" }}>
+                    <button onClick={()=>setEditProv({...p})} style={{ background:B.blue, border:"none", color:"#fff", borderRadius:4, padding:"3px 8px", cursor:"pointer", fontSize:10, marginRight:4 }}>✏️</button>
+                    <button onClick={()=>delProv(p.id)} style={{ background:"none", border:"none", cursor:"pointer", color:"#B0BEC5", fontSize:14 }}>✕</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── GRID PRODUCTOS ── */}
+      {tab === "productos" && (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:12 }}>
+          {filtProd.map(p=>{
+            const pub=(parseFloat(p.base)||0)+(parseFloat(p.iva)||0)+(parseFloat(p.tua)||0)+(parseFloat(p.others)||0);
+            const neta=pub*(1-(parseFloat(p.csb)||0)/100);
+            const wh=proveedores.find(w=>w.id===p.wholesalerId)||{name:"Otro"};
+            return (
+              <div key={p.id} style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:8, overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,.06)" }}>
+                <div style={{ background:B.dark, color:"#fff", padding:"8px 12px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <span style={{ fontSize:9, fontWeight:700, letterSpacing:.6, textTransform:"uppercase", opacity:.8 }}>{p.concept}</span>
+                  <div style={{ display:"flex", gap:5 }}>
+                    <button onClick={()=>setEditProd({...p})} style={{ background:"rgba(255,255,255,.2)", border:"none", borderRadius:3, padding:"2px 7px", cursor:"pointer", color:"#fff", fontSize:9, fontFamily:"inherit" }}>✏️ Editar</button>
+                    <button onClick={()=>delProd(p.id)} style={{ background:"rgba(198,40,40,.4)", border:"none", borderRadius:3, padding:"2px 7px", cursor:"pointer", color:"#fff", fontSize:9, fontFamily:"inherit" }}>✕</button>
+                  </div>
+                </div>
+                <div style={{ padding:"11px 13px" }}>
+                  <div style={{ fontWeight:700, fontSize:12, color:"#263238", marginBottom:4 }}>{p.name}</div>
+                  <div style={{ fontSize:9, color:"#546E7A", marginBottom:6 }}>{wh.name} · {p.currency}</div>
+                  <div style={{ fontSize:9, color:"#90A4AE", whiteSpace:"pre-line", marginBottom:8, lineHeight:1.5 }}>
+                    {p.description.slice(0,120)}{p.description.length>120?"…":""}
+                  </div>
+                  <div style={{ display:"flex", gap:10, paddingTop:8, borderTop:"1px solid #F0F0F0" }}>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:8, color:"#546E7A" }}>PÚBLICA</div>
+                      <div style={{ fontSize:14, fontWeight:900, color:B.blue }}>${fmt(pub)}</div>
+                    </div>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:8, color:"#546E7A" }}>NETA</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:B.teal }}>${fmt(neta)}</div>
+                    </div>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:8, color:"#546E7A" }}>CSB</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:B.gold }}>{p.csb}%</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {filtProd.length===0&&(
+            <div style={{ gridColumn:"1/-1", textAlign:"center", padding:40, color:"#B0BEC5", fontSize:11 }}>
+              <div style={{ fontSize:32, marginBottom:8 }}>📦</div>
+              Sin productos.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -3196,12 +3678,20 @@ function GastosModule() {
   const TIPOS = ["Gasto Fijo","Gasto Variable","Servicios","Gasto Operación","Impuestos","Otros"];
 
   // Proveedores
+  const PROV_EMPTY = () => ({
+    id:uid(), name:"", rfc:"", ruc:"", email:"", phone:"", contacto:"", website:"",
+    formasPago:[], cuentasBancarias:[], notas:"",
+  });
   const [proveedores, setProveedores] = useState([
-    {id:"p1", name:"Adobe Suscripciones"}, {id:"p2", name:"Alcaldía de Panamá"},
-    {id:"p3", name:"T&B Accountant"}, {id:"p4", name:"Aseguradora Ancón"},
+    {id:"p1", name:"Adobe Suscripciones", rfc:"", ruc:"", email:"billing@adobe.com", phone:"", contacto:"", website:"adobe.com", formasPago:["Tarjeta"], cuentasBancarias:[], notas:""},
+    {id:"p2", name:"Alcaldía de Panamá", rfc:"", ruc:"1234567-1-123456", email:"", phone:"507-512-9000", contacto:"", website:"panama.gob.pa", formasPago:["Transferencia"], cuentasBancarias:[], notas:""},
+    {id:"p3", name:"T&B Accountant", rfc:"", ruc:"", email:"tb@accountant.com", phone:"507-6000-0001", contacto:"Lic. Torres", website:"", formasPago:["Transferencia","Cheque"], cuentasBancarias:[], notas:""},
+    {id:"p4", name:"Aseguradora Ancón", rfc:"", ruc:"", email:"info@ancon.com", phone:"507-223-0000", contacto:"María López", website:"aseguradoraancon.com", formasPago:["ACH"], cuentasBancarias:[], notas:""},
   ]);
   const [provSearch, setProvSearch] = useState("");
   const [provForm, setProvForm]     = useState(null);
+  const [provDetalle, setProvDetalle] = useState(null);
+  const FORMAS_PAGO_OPTS = ["Tarjeta","Transferencia","ACH","Cheque","Efectivo","PayPal","Yappy"];
 
   // Conceptos
   const [conceptos, setConceptos] = useState([
@@ -3229,7 +3719,13 @@ function GastosModule() {
   const concSlice = filtConc.slice((concPage-1)*PER_PAGE, concPage*PER_PAGE);
 
   const saveProv = p => {
-    setProveedores(prev => prev.find(x=>x.id===p.id) ? prev.map(x=>x.id===p.id?p:x) : [...prev,p]);
+    const full = {
+      id:p.id, name:p.name||"", rfc:p.rfc||"", ruc:p.ruc||"",
+      email:p.email||"", phone:p.phone||"", contacto:p.contacto||"",
+      website:p.website||"", formasPago:p.formasPago||[],
+      cuentasBancarias:p.cuentasBancarias||[], notas:p.notas||"",
+    };
+    setProveedores(prev => prev.find(x=>x.id===full.id) ? prev.map(x=>x.id===full.id?full:x) : [...prev,full]);
     setProvForm(null);
   };
   const delProv = id => setProveedores(p=>p.filter(x=>x.id!==id));
@@ -3262,17 +3758,65 @@ function GastosModule() {
         <div style={{background:"#fff",border:"1px solid #E0E0E0",borderRadius:10,overflow:"hidden"}}>
           <div style={{background:B.gold,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div style={{fontSize:12,fontWeight:800,color:"#fff"}}>📦 PROVEEDORES GASTOS</div>
-            <button onClick={()=>setProvForm({id:uid(),name:""})}
+            <button onClick={()=>setProvForm(PROV_EMPTY())}
               style={{background:"rgba(255,255,255,.25)",border:"none",color:"#fff",padding:"3px 10px",borderRadius:5,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
               + ALTA
             </button>
           </div>
 
           {provForm && (
-            <div style={{padding:"10px 14px",background:"#FFF8E1",borderBottom:"1px solid #FFE082",display:"flex",gap:8,alignItems:"flex-end"}}>
-              <div style={{flex:1}}><FI label="Nombre del proveedor" value={provForm.name} onChange={v=>setProvForm(p=>({...p,name:v}))} placeholder="Nombre del proveedor..."/></div>
-              <Btn v="primary" sz="sm" onClick={()=>provForm.name.trim()&&saveProv(provForm)}>Guardar</Btn>
-              <Btn v="secondary" sz="sm" onClick={()=>setProvForm(null)}>✕</Btn>
+            <div style={{padding:"14px 16px",background:"#FFF8E1",borderBottom:"1px solid #FFE082"}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+                <FI label="Nombre del proveedor *" value={provForm.name} onChange={v=>setProvForm(p=>({...p,name:v}))} placeholder="Nombre..."/>
+                <FI label="RFC" value={provForm.rfc||""} onChange={v=>setProvForm(p=>({...p,rfc:v}))} placeholder="RFC..."/>
+                <FI label="RUC / NIT" value={provForm.ruc||""} onChange={v=>setProvForm(p=>({...p,ruc:v}))} placeholder="RUC o NIT..."/>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+                <FI label="Email" value={provForm.email||""} onChange={v=>setProvForm(p=>({...p,email:v}))} placeholder="email@proveedor.com"/>
+                <FI label="Teléfono" value={provForm.phone||""} onChange={v=>setProvForm(p=>({...p,phone:v}))} placeholder="+507 0000-0000"/>
+                <FI label="Persona de contacto" value={provForm.contacto||""} onChange={v=>setProvForm(p=>({...p,contacto:v}))} placeholder="Nombre del contacto..."/>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                <FI label="Sitio web" value={provForm.website||""} onChange={v=>setProvForm(p=>({...p,website:v}))} placeholder="www.proveedor.com"/>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:"#546E7A",marginBottom:4}}>FORMAS DE PAGO</div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    {["Tarjeta","Transferencia","ACH","Cheque","Efectivo","PayPal","Yappy"].map(f=>(
+                      <label key={f} style={{display:"flex",alignItems:"center",gap:3,fontSize:11,cursor:"pointer"}}>
+                        <input type="checkbox" checked={(provForm.formasPago||[]).includes(f)}
+                          onChange={e=>setProvForm(p=>({...p,formasPago:e.target.checked?[...(p.formasPago||[]),f]:(p.formasPago||[]).filter(x=>x!==f)}))}/>
+                        {f}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div style={{marginBottom:8}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#546E7A",marginBottom:6}}>CUENTAS BANCARIAS</div>
+                {(provForm.cuentasBancarias||[]).map((cb,i)=>(
+                  <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr auto",gap:6,marginBottom:6,background:"#fff",padding:"6px 8px",borderRadius:6,border:"1px solid #FFE082"}}>
+                    <FI label="Banco" value={cb.banco||""} onChange={v=>setProvForm(p=>({...p,cuentasBancarias:p.cuentasBancarias.map((x,j)=>j===i?{...x,banco:v}:x)}))} placeholder="Nombre del banco"/>
+                    <FI label="N° de cuenta" value={cb.numero||""} onChange={v=>setProvForm(p=>({...p,cuentasBancarias:p.cuentasBancarias.map((x,j)=>j===i?{...x,numero:v}:x)}))} placeholder="0000-0000-00"/>
+                    <FS label="Tipo" value={cb.tipo||"corriente"} onChange={v=>setProvForm(p=>({...p,cuentasBancarias:p.cuentasBancarias.map((x,j)=>j===i?{...x,tipo:v}:x)}))}
+                      options={["corriente","ahorro","tarjeta_credito","paypal"].map(t=>({value:t,label:t.replace("_"," ")}))}/>
+                    <FS label="Moneda" value={cb.moneda||"USD"} onChange={v=>setProvForm(p=>({...p,cuentasBancarias:p.cuentasBancarias.map((x,j)=>j===i?{...x,moneda:v}:x)}))}
+                      options={["USD","PAB","EUR","COP","MXN"].map(c=>({value:c,label:c}))}/>
+                    <button onClick={()=>setProvForm(p=>({...p,cuentasBancarias:p.cuentasBancarias.filter((_,j)=>j!==i)}))}
+                      style={{background:"none",border:"none",cursor:"pointer",color:"#EF5350",fontSize:16,alignSelf:"flex-end",paddingBottom:4}}>✕</button>
+                  </div>
+                ))}
+                <button onClick={()=>setProvForm(p=>({...p,cuentasBancarias:[...(p.cuentasBancarias||[]),{banco:"",numero:"",tipo:"corriente",moneda:"USD"}]}))}
+                  style={{background:"none",border:"1px dashed #FFD54F",borderRadius:5,padding:"4px 12px",fontSize:11,color:"#F9A825",cursor:"pointer",fontFamily:"inherit"}}>
+                  + Agregar cuenta bancaria
+                </button>
+              </div>
+              <div style={{marginBottom:10}}>
+                <FI label="Notas internas" value={provForm.notas||""} onChange={v=>setProvForm(p=>({...p,notas:v}))} placeholder="Observaciones sobre este proveedor..."/>
+              </div>
+              <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+                <Btn v="primary" sz="sm" onClick={()=>provForm.name.trim()&&saveProv(provForm)}>Guardar proveedor</Btn>
+                <Btn v="secondary" sz="sm" onClick={()=>setProvForm(null)}>Cancelar</Btn>
+              </div>
             </div>
           )}
 
@@ -3286,28 +3830,40 @@ function GastosModule() {
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
             <thead><tr style={{background:"#F5F7FA"}}>
               <th style={{padding:"7px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:"#546E7A"}}>Proveedor</th>
-              <th style={{width:40}}></th>
+              <th style={{padding:"7px 8px",fontSize:10,fontWeight:700,color:"#546E7A"}}>RUC / RFC</th>
+              <th style={{padding:"7px 8px",fontSize:10,fontWeight:700,color:"#546E7A"}}>Contacto</th>
+              <th style={{padding:"7px 8px",fontSize:10,fontWeight:700,color:"#546E7A"}}>Teléfono</th>
+              <th style={{padding:"7px 8px",fontSize:10,fontWeight:700,color:"#546E7A"}}>Pago</th>
+              <th style={{width:70}}></th>
             </tr></thead>
             <tbody>
               {provSlice.length===0 && (
-                <tr><td colSpan={2} style={{padding:"20px",textAlign:"center",color:"#B0BEC5",fontSize:11}}>Sin proveedores</td></tr>
+                <tr><td colSpan={6} style={{padding:"20px",textAlign:"center",color:"#B0BEC5",fontSize:11}}>Sin proveedores</td></tr>
               )}
               {provSlice.map(p=>(
                 <tr key={p.id} style={{borderTop:"1px solid #F5F5F5"}}>
                   <td style={{padding:"8px 12px"}}>
-                    {provForm?.id===p.id ? (
-                      <div style={{display:"flex",gap:5}}>
-                        <input value={provForm.name} onChange={e=>setProvForm(x=>({...x,name:e.target.value}))}
-                          style={{...SI,flex:1,padding:"3px 7px",fontSize:11}} autoFocus/>
-                        <button onClick={()=>saveProv(provForm)} style={{background:B.teal,border:"none",color:"#fff",borderRadius:4,padding:"2px 8px",cursor:"pointer",fontSize:10}}>✓</button>
-                        <button onClick={()=>setProvForm(null)} style={{background:"#ECEFF1",border:"none",borderRadius:4,padding:"2px 8px",cursor:"pointer",fontSize:10}}>✕</button>
-                      </div>
-                    ) : (
-                      <span style={{color:B.blue,cursor:"pointer",fontWeight:500}} onClick={()=>setProvForm({...p})}>{p.name}</span>
-                    )}
+                    <div style={{fontWeight:600,color:B.dark}}>{p.name}</div>
+                    {p.email && <div style={{fontSize:10,color:"#90A4AE"}}>{p.email}</div>}
+                  </td>
+                  <td style={{padding:"8px 8px",fontSize:11,color:"#546E7A"}}>
+                    {p.ruc||p.rfc ? <span style={{background:"#EDE7F6",color:"#512DA8",padding:"2px 6px",borderRadius:4,fontSize:10,fontWeight:600}}>{p.ruc||p.rfc}</span> : <span style={{color:"#CFD8DC"}}>—</span>}
+                  </td>
+                  <td style={{padding:"8px 8px",fontSize:11,color:"#546E7A"}}>{p.contacto||"—"}</td>
+                  <td style={{padding:"8px 8px",fontSize:11,color:"#546E7A"}}>{p.phone||"—"}</td>
+                  <td style={{padding:"8px 8px"}}>
+                    <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+                      {(p.formasPago||[]).slice(0,2).map(f=>(
+                        <span key={f} style={{background:"#E8F5E9",color:"#2E7D32",padding:"1px 5px",borderRadius:3,fontSize:9,fontWeight:600}}>{f}</span>
+                      ))}
+                      {(p.formasPago||[]).length>2 && <span style={{fontSize:9,color:"#90A4AE"}}>+{(p.formasPago||[]).length-2}</span>}
+                    </div>
                   </td>
                   <td style={{padding:"4px 8px",textAlign:"center"}}>
-                    <button onClick={()=>delProv(p.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#B0BEC5",fontSize:14}} title="Eliminar">✕</button>
+                    <button onClick={()=>setProvForm({...p})}
+                      style={{background:B.blue,border:"none",color:"#fff",borderRadius:4,padding:"3px 8px",cursor:"pointer",fontSize:10,marginRight:4}}>✏️</button>
+                    <button onClick={()=>delProv(p.id)}
+                      style={{background:"none",border:"none",cursor:"pointer",color:"#B0BEC5",fontSize:14}} title="Eliminar">✕</button>
                   </td>
                 </tr>
               ))}
@@ -3542,14 +4098,79 @@ function AgenciaConfig({ agency: initialAgency, onSave }) {
   const [saved, setSaved] = useState(false);
 
   const upd = (f,v) => setAg(p=>({...p,[f]:v}));
-  const save = () => { onSave && onSave(ag); setSaved(true); setTimeout(()=>setSaved(false),2500); };
+  const save = () => {
+    const fullAg = {
+      ...ag,
+      divisasActivas, divisaPrincipal,
+      conceptosPersonalizados, tiposPersonalizados,
+    };
+    onSave && onSave(fullAg);
+    setSaved(true);
+    setTimeout(()=>setSaved(false),2500);
+  };
 
   const TABS = [
     {id:"general",   label:"General",    icon:"🏢"},
     {id:"contacto",  label:"Contacto",   icon:"📞"},
     {id:"marca",     label:"Marca",      icon:"🎨"},
     {id:"factura",   label:"Facturación",icon:"📄"},
+    {id:"divisas",   label:"Divisas",    icon:"💱"},
+    {id:"conceptos", label:"Conceptos",  icon:"📋"},
   ];
+
+  // Estado para divisas y conceptos personalizados
+  const ALL_CURRENCIES = [
+    {code:"USD", name:"Dólar Estadounidense",  symbol:"$",  flag:"🇺🇸"},
+    {code:"EUR", name:"Euro",                   symbol:"€",  flag:"🇪🇺"},
+    {code:"MXN", name:"Peso Mexicano",           symbol:"$",  flag:"🇲🇽"},
+    {code:"COP", name:"Peso Colombiano",         symbol:"$",  flag:"🇨🇴"},
+    {code:"PEN", name:"Sol Peruano",             symbol:"S/", flag:"🇵🇪"},
+    {code:"ARS", name:"Peso Argentino",          symbol:"$",  flag:"🇦🇷"},
+    {code:"CLP", name:"Peso Chileno",            symbol:"$",  flag:"🇨🇱"},
+    {code:"BRL", name:"Real Brasileño",          symbol:"R$", flag:"🇧🇷"},
+    {code:"GBP", name:"Libra Esterlina",         symbol:"£",  flag:"🇬🇧"},
+    {code:"CAD", name:"Dólar Canadiense",        symbol:"$",  flag:"🇨🇦"},
+    {code:"JPY", name:"Yen Japonés",             symbol:"¥",  flag:"🇯🇵"},
+    {code:"AED", name:"Dírham Emiratos",         symbol:"د.إ",flag:"🇦🇪"},
+    {code:"PAB", name:"Balboa Panameño",         symbol:"B/.",flag:"🇵🇦"},
+    {code:"GTQ", name:"Quetzal Guatemalteco",    symbol:"Q",  flag:"🇬🇹"},
+    {code:"CRC", name:"Colón Costarricense",     symbol:"₡",  flag:"🇨🇷"},
+    {code:"DOP", name:"Peso Dominicano",         symbol:"RD$",flag:"🇩🇴"},
+  ];
+  const [divisasActivas, setDivisasActivas] = useState(
+    ag.divisasActivas || ["USD","EUR","MXN","COP","PEN"]
+  );
+  const [divisaPrincipal, setDivisaPrincipal] = useState(
+    ag.divisaPrincipal || "USD"
+  );
+
+  // Conceptos personalizados
+  const CONCEPTOS_DEFAULT = ["HOTELES NACIONALES","HOTELES INTERNACIONALES","VUELOS NACIONALES","VUELOS INTERNACIONALES","TOURS Y EXCURSIONES","TRASLADOS","SEGUROS DE VIAJE","CRUCEROS","PAQUETES TURISTICOS","OTROS SERVICIOS"];
+  const [conceptosPersonalizados, setConceptosPersonalizados] = useState(
+    ag.conceptosPersonalizados || []
+  );
+  const [newConcepto, setNewConcepto] = useState("");
+  const addConcepto = () => {
+    const val = newConcepto.trim().toUpperCase();
+    if(!val || conceptosPersonalizados.includes(val) || CONCEPTOS_DEFAULT.includes(val)) return;
+    setConceptosPersonalizados(p=>[...p,val]);
+    setNewConcepto("");
+  };
+  const delConcepto = c => setConceptosPersonalizados(p=>p.filter(x=>x!==c));
+
+  // Tipos de gasto personalizados
+  const TIPOS_DEFAULT = ["Gasto Fijo","Gasto Variable","Servicios","Gasto Operación","Impuestos","Otros"];
+  const [tiposPersonalizados, setTiposPersonalizados] = useState(
+    ag.tiposPersonalizados || []
+  );
+  const [newTipo, setNewTipo] = useState("");
+  const addTipo = () => {
+    const val = newTipo.trim();
+    if(!val || tiposPersonalizados.includes(val) || TIPOS_DEFAULT.includes(val)) return;
+    setTiposPersonalizados(p=>[...p,val]);
+    setNewTipo("");
+  };
+  const delTipo = t => setTiposPersonalizados(p=>p.filter(x=>x!==t));
 
   return (
     <div style={{padding:20,maxWidth:800}}>
@@ -3658,6 +4279,125 @@ function AgenciaConfig({ agency: initialAgency, onSave }) {
             </div>
           </div>
         )}
+
+        {/* ── TAB DIVISAS ── */}
+        {tab==="divisas" && (
+          <div>
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:12,fontWeight:700,color:B.dark,marginBottom:4}}>💱 Divisa principal</div>
+              <div style={{fontSize:11,color:"#546E7A",marginBottom:12}}>La divisa principal se usa por defecto en cotizaciones, expedientes y reportes.</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {ALL_CURRENCIES.filter(c=>divisasActivas.includes(c.code)).map(c=>(
+                  <button key={c.code} onClick={()=>setDivisaPrincipal(c.code)}
+                    style={{padding:"8px 14px",borderRadius:8,border:`2px solid ${divisaPrincipal===c.code?B.blue:"#E0E0E0"}`,background:divisaPrincipal===c.code?"#EFF6FF":"#fff",cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6,fontSize:12,fontWeight:divisaPrincipal===c.code?700:400,color:divisaPrincipal===c.code?B.blue:"#333"}}>
+                    {c.flag} {c.code} <span style={{color:"#90A4AE",fontSize:10}}>{c.symbol}</span>
+                    {divisaPrincipal===c.code&&<span style={{fontSize:9,background:B.blue,color:"#fff",padding:"1px 5px",borderRadius:3,marginLeft:2}}>PRINCIPAL</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{borderTop:"1px solid #F0F0F0",paddingTop:20}}>
+              <div style={{fontSize:12,fontWeight:700,color:B.dark,marginBottom:4}}>🌍 Divisas activas en el sistema</div>
+              <div style={{fontSize:11,color:"#546E7A",marginBottom:16}}>Activa las divisas que tu agencia maneja. Solo las activas aparecerán en cotizaciones, expedientes y reportes.</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:8}}>
+                {ALL_CURRENCIES.map(c=>{
+                  const active = divisasActivas.includes(c.code);
+                  const isPrincipal = divisaPrincipal===c.code;
+                  return (
+                    <label key={c.code} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,border:`1px solid ${active?"#BBDEFB":"#E0E0E0"}`,background:active?"#EFF6FF":"#fff",cursor:isPrincipal?"default":"pointer",opacity:isPrincipal?1:1}}>
+                      <input type="checkbox" checked={active} disabled={isPrincipal}
+                        onChange={e=>{
+                          if(isPrincipal) return;
+                          setDivisasActivas(p=>e.target.checked?[...p,c.code]:p.filter(x=>x!==c.code));
+                        }}/>
+                      <span style={{fontSize:18}}>{c.flag}</span>
+                      <div>
+                        <div style={{fontSize:12,fontWeight:700,color:active?B.blue:"#333"}}>{c.code} <span style={{fontWeight:400,color:"#90A4AE"}}>{c.symbol}</span></div>
+                        <div style={{fontSize:10,color:"#90A4AE"}}>{c.name}</div>
+                      </div>
+                      {isPrincipal&&<span style={{marginLeft:"auto",fontSize:9,background:B.blue,color:"#fff",padding:"2px 6px",borderRadius:3}}>PRINCIPAL</span>}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB CONCEPTOS ── */}
+        {tab==="conceptos" && (
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+
+            {/* Conceptos de venta */}
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:B.dark,marginBottom:4}}>📦 Conceptos de venta / expediente</div>
+              <div style={{fontSize:11,color:"#546E7A",marginBottom:12}}>Aparecen en el selector de conceptos al crear items en expedientes y cotizaciones.</div>
+
+              {/* Predefinidos */}
+              <div style={{fontSize:10,fontWeight:700,color:"#90A4AE",marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Predefinidos (no editables)</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:16}}>
+                {CONCEPTOS_DEFAULT.map(c=>(
+                  <span key={c} style={{background:"#F5F7FA",border:"1px solid #E0E0E0",borderRadius:5,padding:"3px 9px",fontSize:11,color:"#546E7A"}}>{c}</span>
+                ))}
+              </div>
+
+              {/* Personalizados */}
+              <div style={{fontSize:10,fontWeight:700,color:B.blue,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Personalizados de tu agencia</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:12}}>
+                {conceptosPersonalizados.length===0&&<span style={{fontSize:11,color:"#B0BEC5"}}>Aún no has agregado conceptos personalizados</span>}
+                {conceptosPersonalizados.map(c=>(
+                  <span key={c} style={{background:"#EFF6FF",border:"1px solid #BBDEFB",borderRadius:5,padding:"3px 9px",fontSize:11,color:B.blue,display:"flex",alignItems:"center",gap:5}}>
+                    {c}
+                    <button onClick={()=>delConcepto(c)} style={{background:"none",border:"none",cursor:"pointer",color:"#EF5350",fontSize:12,padding:0,lineHeight:1}}>✕</button>
+                  </span>
+                ))}
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <input value={newConcepto} onChange={e=>setNewConcepto(e.target.value.toUpperCase())}
+                  onKeyDown={e=>e.key==="Enter"&&addConcepto()}
+                  placeholder="NUEVO CONCEPTO..." style={{...SI,flex:1,fontSize:11}}/>
+                <button onClick={addConcepto}
+                  style={{background:B.blue,color:"#fff",border:"none",borderRadius:6,padding:"6px 14px",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit"}}>+ Agregar</button>
+              </div>
+            </div>
+
+            {/* Tipos de gasto */}
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:B.dark,marginBottom:4}}>💸 Tipos de gasto</div>
+              <div style={{fontSize:11,color:"#546E7A",marginBottom:12}}>Aparecen en el módulo de Gastos al clasificar conceptos de gasto.</div>
+
+              {/* Predefinidos */}
+              <div style={{fontSize:10,fontWeight:700,color:"#90A4AE",marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Predefinidos (no editables)</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:16}}>
+                {TIPOS_DEFAULT.map(t=>(
+                  <span key={t} style={{background:"#F5F7FA",border:"1px solid #E0E0E0",borderRadius:5,padding:"3px 9px",fontSize:11,color:"#546E7A"}}>{t}</span>
+                ))}
+              </div>
+
+              {/* Personalizados */}
+              <div style={{fontSize:10,fontWeight:700,color:B.gold,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Personalizados de tu agencia</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:12}}>
+                {tiposPersonalizados.length===0&&<span style={{fontSize:11,color:"#B0BEC5"}}>Aún no has agregado tipos personalizados</span>}
+                {tiposPersonalizados.map(t=>(
+                  <span key={t} style={{background:"#FFF8E1",border:"1px solid #FFE082",borderRadius:5,padding:"3px 9px",fontSize:11,color:"#F9A825",display:"flex",alignItems:"center",gap:5}}>
+                    {t}
+                    <button onClick={()=>delTipo(t)} style={{background:"none",border:"none",cursor:"pointer",color:"#EF5350",fontSize:12,padding:0,lineHeight:1}}>✕</button>
+                  </span>
+                ))}
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <input value={newTipo} onChange={e=>setNewTipo(e.target.value)}
+                  onKeyDown={e=>e.key==="Enter"&&addTipo()}
+                  placeholder="Nuevo tipo de gasto..." style={{...SI,flex:1,fontSize:11}}/>
+                <button onClick={addTipo}
+                  style={{background:B.gold,color:"#fff",border:"none",borderRadius:6,padding:"6px 14px",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit"}}>+ Agregar</button>
+              </div>
+            </div>
+
+          </div>
+        )}
+
       </div>
     </div>
   );
@@ -5096,7 +5836,7 @@ export default function App() {
         <div style={{ flex:1 }}/>
         <input placeholder="Crear expediente - buscar cliente existente"
           style={{ ...SI, width:240, padding:"4px 9px", fontSize:10, background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.3)", color:"#fff", borderRadius:4 }}/>
-        <Btn v="gold" sz="sm" onClick={() => { setEditCli(mkClient()); setPage("cli-detail"); }}>+ Cliente nuevo</Btn>
+        <Btn v="gold" sz="sm" onClick={() => { setEditCli(mkClient(clients)); setPage("cli-detail"); }}>+ Cliente nuevo</Btn>
         <UserMenu user={user} onLogout={logout} onProfile={()=>goTo("cfg-agentes")}/>
       </div>
 
@@ -5118,7 +5858,7 @@ export default function App() {
 
           {page==="clientes" && !editCli && (
             canAccess("clientes")
-              ? <CliList clients={clients} onSelect={c=>{setEditCli(JSON.parse(JSON.stringify(c)));setPage("cli-detail");}} onNew={()=>{setEditCli(mkClient());setPage("cli-detail");}}/>
+              ? <CliList clients={clients} onSelect={c=>{setEditCli(JSON.parse(JSON.stringify(c)));setPage("cli-detail");}} onNew={()=>{setEditCli(mkClient(clients));setPage("cli-detail");}}/>
               : <AccessDenied pageName="Clientes"/>
           )}
           {page==="cli-detail" && editCli && (
