@@ -2427,25 +2427,29 @@ function GruposList({ grupos, expedientes, onSelect, onNew }) {
 }
 
 // ─── FASE 2: CUENTAS X COBRAR ─────────────────────────────────────────────────
-function CuentasXCobrar({ expedientes, clients }) {
+function CuentasXCobrar({ expedientes, clients, onGoToExp }) {
   const [tab, setTab] = useState("clientes");
   const TABS = [{ id:"clientes", label:"Clientes" }, { id:"comisiones", label:"Comisiones" }];
 
-  // pending balances per expediente
+  // Filas con desglose completo por expediente
   const rows = expedientes.map(e => {
-    const pub  = e.items.reduce((s,it)=>{const p=(parseFloat(it.base)||0)+(parseFloat(it.iva)||0)+(parseFloat(it.tua)||0)+(parseFloat(it.others)||0);return s+p;},0);
-    const paid = e.payments.filter(p=>p.confirmed).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
-    const saldo = pub - paid;
-    const neta  = e.items.reduce((s,it)=>{const p=(parseFloat(it.base)||0)+(parseFloat(it.iva)||0)+(parseFloat(it.tua)||0)+(parseFloat(it.others)||0);return s+p*(1-(parseFloat(it.csb)||0)/100);},0);
-    const com   = pub - neta;
-    const adv   = ADVISORS.find(a=>a.id===e.advisorId);
-    return { ...e, pub, paid, saldo, neta, com, adv };
-  }).filter(r => r.saldo > 0).sort((a,b) => b.saldo - a.saldo);
+    const pub       = e.items.reduce((s,it)=>{const p=(parseFloat(it.base)||0)+(parseFloat(it.iva)||0)+(parseFloat(it.tua)||0)+(parseFloat(it.others)||0);return s+p;},0);
+    const paid      = e.payments.filter(p=>p.confirmed).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+    const saldo     = pub - paid;
+    const neta      = e.items.reduce((s,it)=>{const p=(parseFloat(it.base)||0)+(parseFloat(it.iva)||0)+(parseFloat(it.tua)||0)+(parseFloat(it.others)||0);return s+p*(1-(parseFloat(it.csb)||0)/100);},0);
+    const com       = pub - neta;
+    // Pagos a proveedores en este expediente
+    const pagoProv  = e.majorPayments.filter(p=>p.confirmed).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+    const adv       = ADVISORS.find(a=>a.id===e.advisorId);
+    return { ...e, pub, paid, saldo, neta, com, pagoProv, adv };
+  }).filter(r => r.pub > 0).sort((a,b) => b.saldo - a.saldo);
 
-  const totalSaldo = rows.reduce((s,r) => s+r.saldo, 0);
-  const totalPub   = rows.reduce((s,r) => s+r.pub,   0);
+  const totalSaldo   = rows.reduce((s,r) => s+r.saldo,    0);
+  const totalPub     = rows.reduce((s,r) => s+r.pub,      0);
+  const totalPaid    = rows.reduce((s,r) => s+r.paid,     0);
+  const totalPagoProv= rows.reduce((s,r) => s+r.pagoProv, 0);
+  const totalSaldoProv = rows.reduce((s,r) => s+(r.neta - r.pagoProv), 0);
 
-  // commissions: items with csb > 0 not yet paid by major
   const comRows = expedientes.flatMap(e =>
     e.items.filter(it=>(parseFloat(it.csb)||0)>0).map(it=>{
       const pub=(parseFloat(it.base)||0)+(parseFloat(it.iva)||0)+(parseFloat(it.tua)||0)+(parseFloat(it.others)||0);
@@ -2454,7 +2458,7 @@ function CuentasXCobrar({ expedientes, clients }) {
       const wh=WHOLESALERS.find(w=>w.id===it.wholesalerId)||WHOLESALERS[0];
       const adv=ADVISORS.find(a=>a.id===e.advisorId);
       const majPaid=e.majorPayments.filter(p=>p.confirmed).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
-      return { id:it.id, expNo:e.no, clientName:e.clientName, concept:it.concept, wh:wh.name, pub, neta, com, pct:it.csb, adv, majPaid, status:e.status };
+      return { id:it.id, expNo:e.no, expId:e.id, clientName:e.clientName, concept:it.concept, wh:wh.name, pub, neta, com, pct:it.csb, adv, majPaid, status:e.status };
     })
   ).filter(r=>r.com>0);
   const totalCom = comRows.reduce((s,r) => s+r.com, 0);
@@ -2463,18 +2467,22 @@ function CuentasXCobrar({ expedientes, clients }) {
   const tdS = { padding:"6px 8px", fontSize:10, borderBottom:"1px solid #F0F0F0" };
 
   return (
-    <div style={{ padding:18, maxWidth:1100, margin:"0 auto" }}>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:14 }}>
+    <div style={{ padding:18, maxWidth:1200, margin:"0 auto" }}>
+
+      {/* STATS — 5 tarjetas */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:10, marginBottom:14 }}>
         {[
-          { label:"Saldo total por cobrar", value:`$${fmt(totalSaldo)}`, color:B.red,   icon:"💳" },
-          { label:"Venta total implicada",  value:`$${fmt(totalPub)}`,   color:B.blue,  icon:"💰" },
-          { label:"Comisiones por cobrar",  value:`$${fmt(totalCom)}`,   color:B.gold,  icon:"📈" },
+          { label:"Venta total",           value:`$${fmt(totalPub)}`,      color:B.blue,  icon:"💰", hint:"Precio público de todos los expedientes" },
+          { label:"Cobrado al cliente",    value:`$${fmt(totalPaid)}`,     color:B.green, icon:"✅", hint:"Pagos confirmados del cliente" },
+          { label:"Saldo por cobrar",      value:`$${fmt(totalSaldo)}`,    color:B.red,   icon:"💳", hint:"Lo que el cliente aún debe" },
+          { label:"Pagado a proveedores",  value:`$${fmt(totalPagoProv)}`, color:B.teal,  icon:"💸", hint:"Pagos confirmados a mayoristas" },
+          { label:"Saldo a proveedores",   value:`$${fmt(totalSaldoProv < 0 ? 0 : totalSaldoProv)}`, color:B.gold, icon:"⏳", hint:"Neto pendiente de pagar a mayoristas" },
         ].map(s=>(
-          <div key={s.label} style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:7, padding:14, display:"flex", gap:10, alignItems:"center" }}>
-            <div style={{ fontSize:28 }}>{s.icon}</div>
+          <div key={s.label} title={s.hint} style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:7, padding:"10px 12px", display:"flex", gap:8, alignItems:"center", cursor:"default" }}>
+            <div style={{ fontSize:22 }}>{s.icon}</div>
             <div>
-              <div style={{ fontSize:9, color:"#546E7A" }}>{s.label}</div>
-              <div style={{ fontSize:20, fontWeight:900, color:s.color }}>{s.value}</div>
+              <div style={{ fontSize:8, color:"#90A4AE", textTransform:"uppercase", letterSpacing:.5 }}>{s.label}</div>
+              <div style={{ fontSize:16, fontWeight:900, color:s.color }}>{s.value}</div>
             </div>
           </div>
         ))}
@@ -2486,7 +2494,7 @@ function CuentasXCobrar({ expedientes, clients }) {
         <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, overflowX:"auto" }}>
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:10 }}>
             <thead><tr style={{ background:"#F5F7FA" }}>
-              {["No.Exp.","Cliente","Agente","Destino","Estatus","Venta","Cobrado","Saldo","Próximo pago",""].map(h=>(
+              {["No.Exp.","Cliente","Agente","Destino","Estatus","Venta total","Cobrado cliente","Saldo cliente","Pagado proveed.","Saldo proveed.","Próx. pago",""].map(h=>(
                 <th key={h} style={thS}>{h}</th>
               ))}
             </tr></thead>
@@ -2494,31 +2502,54 @@ function CuentasXCobrar({ expedientes, clients }) {
               {rows.map((r,i)=>{
                 const st=EXP_STATUS[r.status]||EXP_STATUS.nuevo;
                 const nextPay=r.payments.filter(p=>!p.confirmed)[0];
+                const saldoProv = Math.max(0, r.neta - r.pagoProv);
+                const isUrgent = nextPay && new Date(nextPay.date) <= new Date(Date.now()+3*86400000);
                 return (
                   <tr key={r.id} style={{ background:i%2===0?"#fff":"#FAFAFA" }}>
-                    <td style={{ ...tdS, color:B.blue, fontWeight:700 }}>{r.no}</td>
+                    <td style={{ ...tdS }}>
+                      <span style={{ color:B.blue, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}
+                        onClick={()=>onGoToExp&&onGoToExp(r.id)}>
+                        {r.no}
+                      </span>
+                    </td>
                     <td style={{ ...tdS, fontWeight:600 }}>{r.clientName||"–"}</td>
                     <td style={tdS}>{r.adv?.name.split(" ")[0]||"–"}</td>
                     <td style={tdS}>{r.trip?.destination||"–"}</td>
-                    <td style={tdS}><span style={{ background:st.bg, color:st.c, padding:"2px 6px", borderRadius:6, fontSize:9, fontWeight:700 }}>{st.label}</span></td>
+                    <td style={tdS}>
+                      <span style={{ background:st.bg, color:st.c, padding:"2px 6px", borderRadius:6, fontSize:9, fontWeight:700 }}>{st.label}</span>
+                    </td>
                     <td style={{ ...tdS, color:B.blue, fontWeight:700 }}>${fmt(r.pub)}</td>
-                    <td style={{ ...tdS, color:B.green }}>${fmt(r.paid)}</td>
-                    <td style={{ ...tdS, color:B.red, fontWeight:700 }}>${fmt(r.saldo)}</td>
-                    <td style={tdS}>{nextPay ? nextPay.date : "–"}</td>
-                    <td style={tdS}><Btn v="primary" sz="sm">💳 Cobrar</Btn></td>
+                    <td style={{ ...tdS, color:B.green, fontWeight:600 }}>${fmt(r.paid)}</td>
+                    <td style={{ ...tdS, color:r.saldo>0?B.red:"#546E7A", fontWeight:r.saldo>0?700:400 }}>
+                      {r.saldo>0?`$${fmt(r.saldo)}`:"✅ Al día"}
+                    </td>
+                    <td style={{ ...tdS, color:B.teal, fontWeight:600 }}>${fmt(r.pagoProv)}</td>
+                    <td style={{ ...tdS, color:saldoProv>0?B.gold:"#546E7A", fontWeight:saldoProv>0?700:400 }}>
+                      {saldoProv>0?`$${fmt(saldoProv)}`:"✅ Pagado"}
+                    </td>
+                    <td style={{ ...tdS, color:isUrgent?B.red:"#546E7A", fontWeight:isUrgent?700:400 }}>
+                      {nextPay ? (
+                        <span>{nextPay.date}{isUrgent&&" ⚠️"}</span>
+                      ) : "–"}
+                    </td>
+                    <td style={tdS}>
+                      <Btn v="primary" sz="sm">💳 Cobrar</Btn>
+                    </td>
                   </tr>
                 );
               })}
               {rows.length===0&&(
-                <tr><td colSpan={10} style={{ textAlign:"center", padding:30, color:"#B0BEC5", fontSize:11 }}>✅ Sin saldos pendientes por cobrar.</td></tr>
+                <tr><td colSpan={12} style={{ textAlign:"center", padding:30, color:"#B0BEC5", fontSize:11 }}>✅ Sin expedientes.</td></tr>
               )}
             </tbody>
             {rows.length>0&&(
               <tfoot><tr style={{ background:"#F5F7FA", fontWeight:700 }}>
-                <td colSpan={5} style={{ padding:"6px 8px", fontSize:10, textAlign:"right", color:"#546E7A" }}>TOTALES:</td>
+                <td colSpan={5} style={{ padding:"6px 8px", fontSize:10, textAlign:"right", color:"#546E7A" }}>TOTALES →</td>
                 <td style={{ padding:"6px 8px", color:B.blue }}>${fmt(totalPub)}</td>
-                <td style={{ padding:"6px 8px", color:B.green }}>${fmt(rows.reduce((s,r)=>s+r.paid,0))}</td>
-                <td style={{ padding:"6px 8px", color:B.red, fontWeight:900 }}>${fmt(totalSaldo)}</td>
+                <td style={{ padding:"6px 8px", color:B.green }}>${fmt(totalPaid)}</td>
+                <td style={{ padding:"6px 8px", color:B.red, fontSize:12 }}>${fmt(totalSaldo)}</td>
+                <td style={{ padding:"6px 8px", color:B.teal }}>${fmt(totalPagoProv)}</td>
+                <td style={{ padding:"6px 8px", color:B.gold, fontSize:12 }}>${fmt(Math.max(0,totalSaldoProv))}</td>
                 <td colSpan={2}/>
               </tr></tfoot>
             )}
@@ -2537,7 +2568,10 @@ function CuentasXCobrar({ expedientes, clients }) {
             <tbody>
               {comRows.map((r,i)=>(
                 <tr key={r.id} style={{ background:i%2===0?"#fff":"#FAFAFA" }}>
-                  <td style={{ ...tdS, color:B.blue, fontWeight:700 }}>{r.expNo}</td>
+                  <td style={{ ...tdS }}>
+                    <span style={{ color:B.blue, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}
+                      onClick={()=>onGoToExp&&onGoToExp(r.expId)}>{r.expNo}</span>
+                  </td>
                   <td style={{ ...tdS, fontWeight:600 }}>{r.clientName||"–"}</td>
                   <td style={tdS}>{r.concept}</td>
                   <td style={tdS}>{r.wh}</td>
@@ -2547,7 +2581,9 @@ function CuentasXCobrar({ expedientes, clients }) {
                   <td style={{ ...tdS, color:B.gold, fontWeight:700 }}>${fmt(r.com)}</td>
                   <td style={tdS}>{r.pct}%</td>
                   <td style={{ ...tdS, color:B.green }}>${fmt(r.majPaid)}</td>
-                  <td style={tdS}><span style={{ background:"#FFF8E1", color:B.gold, padding:"2px 6px", borderRadius:6, fontSize:9, fontWeight:700 }}>Pendiente</span></td>
+                  <td style={tdS}>
+                    <span style={{ background:"#FFF8E1", color:B.gold, padding:"2px 6px", borderRadius:6, fontSize:9, fontWeight:700 }}>Pendiente</span>
+                  </td>
                 </tr>
               ))}
               {comRows.length===0&&(
@@ -2569,43 +2605,51 @@ function CuentasXCobrar({ expedientes, clients }) {
 }
 
 // ─── FASE 2: CUENTAS X PAGAR ──────────────────────────────────────────────────
-function CuentasXPagar({ expedientes }) {
+function CuentasXPagar({ expedientes, onGoToExp }) {
   const [tab, setTab] = useState("mayoristas");
   const TABS = [{ id:"mayoristas", label:"Mayoristas" }, { id:"gastos", label:"Gastos" }];
 
   const rows = expedientes.flatMap(e =>
     e.items.map(it => {
-      const pub  = (parseFloat(it.base)||0)+(parseFloat(it.iva)||0)+(parseFloat(it.tua)||0)+(parseFloat(it.others)||0);
-      const neta = pub*(1-(parseFloat(it.csb)||0)/100);
-      const com  = pub-neta;
-      const paid = e.majorPayments.filter(p=>p.confirmed).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
-      const pending = neta - paid;
-      const wh   = WHOLESALERS.find(w=>w.id===it.wholesalerId)||WHOLESALERS[0];
-      const adv  = ADVISORS.find(a=>a.id===e.advisorId);
-      return { id:it.id, expNo:e.no, clientName:e.clientName, concept:it.concept, wh, adv, pub, neta, com, paid, pending, limit:it.dateTo, status:e.status };
+      const pub     = (parseFloat(it.base)||0)+(parseFloat(it.iva)||0)+(parseFloat(it.tua)||0)+(parseFloat(it.others)||0);
+      const neta    = pub*(1-(parseFloat(it.csb)||0)/100);
+      const com     = pub-neta;
+      // Pagos del cliente para este expediente
+      const cliPaid = e.payments.filter(p=>p.confirmed).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+      const majPaid = e.majorPayments.filter(p=>p.confirmed).reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+      const pending = Math.max(0, neta - majPaid);
+      const wh      = WHOLESALERS.find(w=>w.id===it.wholesalerId)||WHOLESALERS[0];
+      const adv     = ADVISORS.find(a=>a.id===e.advisorId);
+      return { id:it.id, expId:e.id, expNo:e.no, clientName:e.clientName, concept:it.concept, wh, adv, pub, neta, com, cliPaid, majPaid, pending, limit:it.dateTo, status:e.status };
     })
-  ).filter(r => r.pending > 0).sort((a,b) => (a.limit||"9999").localeCompare(b.limit||"9999"));
+  ).filter(r => r.neta > 0).sort((a,b) => (a.limit||"9999").localeCompare(b.limit||"9999"));
 
-  const totalNeta    = rows.reduce((s,r) => s+r.neta, 0);
-  const totalPending = rows.reduce((s,r) => s+r.pending, 0);
-  const totalPaid    = rows.reduce((s,r) => s+r.paid, 0);
+  const totalNeta    = rows.reduce((s,r) => s+r.neta,    0);
+  const totalPending = rows.reduce((s,r) => s+r.pending,  0);
+  const totalMajPaid = rows.reduce((s,r) => s+r.majPaid,  0);
+  const totalCliPaid = rows.reduce((s,r) => s+r.cliPaid,  0);
+  const totalPub     = rows.reduce((s,r) => s+r.pub,      0);
 
   const thS = { padding:"6px 8px", fontSize:9, fontWeight:700, color:"#546E7A", textAlign:"left", whiteSpace:"nowrap" };
   const tdS = { padding:"6px 8px", fontSize:10, borderBottom:"1px solid #F0F0F0" };
 
   return (
-    <div style={{ padding:18, maxWidth:1100, margin:"0 auto" }}>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:14 }}>
+    <div style={{ padding:18, maxWidth:1200, margin:"0 auto" }}>
+
+      {/* STATS — 5 tarjetas */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:10, marginBottom:14 }}>
         {[
-          { label:"Total por pagar (neto)",   value:`$${fmt(totalNeta)}`,    color:B.red,  icon:"💸" },
-          { label:"Ya pagado a mayoristas",   value:`$${fmt(totalPaid)}`,    color:B.green,icon:"✅" },
-          { label:"Pendiente de pago",        value:`$${fmt(totalPending)}`, color:B.gold, icon:"⏳" },
+          { label:"Venta total",          value:`$${fmt(totalPub)}`,     color:B.blue,  icon:"💰" },
+          { label:"Cobrado al cliente",   value:`$${fmt(totalCliPaid)}`, color:B.green, icon:"✅" },
+          { label:"Neto a proveedores",   value:`$${fmt(totalNeta)}`,    color:B.teal,  icon:"🏦" },
+          { label:"Ya pagado proveed.",   value:`$${fmt(totalMajPaid)}`, color:B.green, icon:"💸" },
+          { label:"Pendiente proveed.",   value:`$${fmt(totalPending)}`, color:B.red,   icon:"⏳" },
         ].map(s=>(
-          <div key={s.label} style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:7, padding:14, display:"flex", gap:10, alignItems:"center" }}>
-            <div style={{ fontSize:28 }}>{s.icon}</div>
+          <div key={s.label} style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:7, padding:"10px 12px", display:"flex", gap:8, alignItems:"center" }}>
+            <div style={{ fontSize:22 }}>{s.icon}</div>
             <div>
-              <div style={{ fontSize:9, color:"#546E7A" }}>{s.label}</div>
-              <div style={{ fontSize:20, fontWeight:900, color:s.color }}>{s.value}</div>
+              <div style={{ fontSize:8, color:"#90A4AE", textTransform:"uppercase", letterSpacing:.5 }}>{s.label}</div>
+              <div style={{ fontSize:16, fontWeight:900, color:s.color }}>{s.value}</div>
             </div>
           </div>
         ))}
@@ -2617,41 +2661,50 @@ function CuentasXPagar({ expedientes }) {
         <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, overflowX:"auto" }}>
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:10 }}>
             <thead><tr style={{ background:"#F5F7FA" }}>
-              {["No.Exp.","Cliente","Concepto","Mayorista","Agente","Pública","Neta","Comisión","Pagado","Pendiente","Límite",""].map(h=>(
+              {["No.Exp.","Cliente","Concepto","Proveedor","Agente","Venta","Cobrado cliente","Neto proveed.","Pagado proveed.","Pendiente proveed.","Límite pago",""].map(h=>(
                 <th key={h} style={thS}>{h}</th>
               ))}
             </tr></thead>
             <tbody>
               {rows.map((r,i)=>{
-                const isUrgent = r.limit && new Date(r.limit) <= new Date(Date.now()+5*86400000);
+                const isUrgent  = r.limit && new Date(r.limit) <= new Date(Date.now()+5*86400000);
+                const isOverdue = r.limit && new Date(r.limit) < new Date();
                 return (
-                  <tr key={r.id} style={{ background: isUrgent?"#FFFDE7":i%2===0?"#fff":"#FAFAFA" }}>
-                    <td style={{ ...tdS, color:B.blue, fontWeight:700 }}>{r.expNo}</td>
+                  <tr key={r.id} style={{ background: isOverdue?"#FFEBEE":isUrgent?"#FFFDE7":i%2===0?"#fff":"#FAFAFA" }}>
+                    <td style={tdS}>
+                      <span style={{ color:B.blue, fontWeight:700, cursor:"pointer", textDecoration:"underline" }}
+                        onClick={()=>onGoToExp&&onGoToExp(r.expId)}>{r.expNo}</span>
+                    </td>
                     <td style={{ ...tdS, fontWeight:600 }}>{r.clientName||"–"}</td>
                     <td style={tdS}>{r.concept}</td>
                     <td style={{ ...tdS, fontWeight:600 }}>{r.wh.name}</td>
                     <td style={tdS}>{r.adv?.name.split(" ")[0]||"–"}</td>
-                    <td style={{ ...tdS, color:B.blue }}>${fmt(r.pub)}</td>
+                    <td style={{ ...tdS, color:B.blue, fontWeight:600 }}>${fmt(r.pub)}</td>
+                    <td style={{ ...tdS, color:B.green }}>${fmt(r.cliPaid)}</td>
                     <td style={{ ...tdS, color:B.teal, fontWeight:700 }}>${fmt(r.neta)}</td>
-                    <td style={{ ...tdS, color:B.gold }}>${fmt(r.com)}</td>
-                    <td style={{ ...tdS, color:B.green }}>${fmt(r.paid)}</td>
-                    <td style={{ ...tdS, color:B.red, fontWeight:700 }}>${fmt(r.pending)}</td>
-                    <td style={{ ...tdS, color:isUrgent?B.red:"#546E7A", fontWeight:isUrgent?700:400 }}>{r.limit||"–"}</td>
+                    <td style={{ ...tdS, color:B.green }}>${fmt(r.majPaid)}</td>
+                    <td style={{ ...tdS, color:r.pending>0?B.red:"#546E7A", fontWeight:r.pending>0?700:400 }}>
+                      {r.pending>0?`$${fmt(r.pending)}`:"✅ Pagado"}
+                    </td>
+                    <td style={{ ...tdS, color:isOverdue?"#C62828":isUrgent?B.red:"#546E7A", fontWeight:isUrgent||isOverdue?700:400 }}>
+                      {r.limit||(isOverdue?"⚠️ Vencido":"–")}
+                      {isOverdue&&" ⚠️"}
+                    </td>
                     <td style={tdS}><Btn v="gold" sz="sm">💸 Pagar</Btn></td>
                   </tr>
                 );
               })}
               {rows.length===0&&(
-                <tr><td colSpan={12} style={{ textAlign:"center", padding:30, color:"#B0BEC5", fontSize:11 }}>✅ Sin pagos pendientes a mayoristas.</td></tr>
+                <tr><td colSpan={12} style={{ textAlign:"center", padding:30, color:"#B0BEC5", fontSize:11 }}>✅ Sin pagos pendientes a proveedores.</td></tr>
               )}
             </tbody>
             {rows.length>0&&(
               <tfoot><tr style={{ background:"#F5F7FA", fontWeight:700 }}>
-                <td colSpan={5} style={{ padding:"6px 8px", fontSize:10, textAlign:"right", color:"#546E7A" }}>TOTALES:</td>
-                <td style={{ padding:"6px 8px", color:B.blue }}>${fmt(rows.reduce((s,r)=>s+r.pub,0))}</td>
+                <td colSpan={5} style={{ padding:"6px 8px", fontSize:10, textAlign:"right", color:"#546E7A" }}>TOTALES →</td>
+                <td style={{ padding:"6px 8px", color:B.blue }}>${fmt(totalPub)}</td>
+                <td style={{ padding:"6px 8px", color:B.green }}>${fmt(totalCliPaid)}</td>
                 <td style={{ padding:"6px 8px", color:B.teal }}>${fmt(totalNeta)}</td>
-                <td style={{ padding:"6px 8px", color:B.gold }}>${fmt(rows.reduce((s,r)=>s+r.com,0))}</td>
-                <td style={{ padding:"6px 8px", color:B.green }}>${fmt(totalPaid)}</td>
+                <td style={{ padding:"6px 8px", color:B.green }}>${fmt(totalMajPaid)}</td>
                 <td style={{ padding:"6px 8px", color:B.red, fontSize:12 }}>${fmt(totalPending)}</td>
                 <td colSpan={2}/>
               </tr></tfoot>
