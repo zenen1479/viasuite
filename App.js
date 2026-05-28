@@ -155,17 +155,31 @@ const ADVISORS = [
   { id:"5", name:"Admin Sistema",  wp:"6938-0957" },
 ];
 
-const WHOLESALERS = [
-  { id:"bbr",       name:"Bijao Beach Resort",    code:"BBR" },
-  { id:"hyatt",     name:"Hyatt Hotels",           code:"HYT" },
-  { id:"marriott",  name:"Marriott International", code:"MRR" },
-  { id:"copa",      name:"Copa Airlines",          code:"CM"  },
-  { id:"airfrance", name:"Air France",             code:"AF"  },
-  { id:"wizz",      name:"Wizz Air",               code:"W6"  },
-  { id:"accessrail",name:"AccessRail",             code:"AR"  },
-  { id:"assistcard",name:"Assist-Card",            code:"AC"  },
-  { id:"other",     name:"Otro",                   code:"OTR" },
+// ─── CATÁLOGO MAYORISTAS / AEROLÍNEAS / HOTELES ──────────────────────────────
+// Se inicializa desde estado global (App) para permitir agregar/editar/eliminar
+const WHOLESALERS_SEED = [
+  // Hoteles nacionales
+  { id:"bbr",       name:"Bijao Beach Resort",       code:"BBR",  tipo:"hotel",     pais:"Panama",  contacto:"", email:"", phone:"", web:"granevenia.com",    notas:"" },
+  { id:"hyatt",     name:"Hyatt Hotels",             code:"HYT",  tipo:"hotel",     pais:"USA",     contacto:"", email:"", phone:"", web:"hyatt.com",         notas:"" },
+  { id:"marriott",  name:"Marriott International",   code:"MRR",  tipo:"hotel",     pais:"USA",     contacto:"", email:"", phone:"", web:"marriott.com",      notas:"" },
+  // Aerolíneas
+  { id:"copa",      name:"Copa Airlines",            code:"CM",   tipo:"aerolinea", pais:"Panama",  contacto:"", email:"", phone:"", web:"copaair.com",       notas:"" },
+  { id:"airfrance", name:"Air France",               code:"AF",   tipo:"aerolinea", pais:"Francia", contacto:"", email:"", phone:"", web:"airfrance.com",     notas:"" },
+  { id:"wizz",      name:"Wizz Air",                 code:"W6",   tipo:"aerolinea", pais:"Hungria", contacto:"", email:"", phone:"", web:"wizzair.com",       notas:"" },
+  { id:"united",    name:"United Airlines",          code:"UA",   tipo:"aerolinea", pais:"USA",     contacto:"", email:"", phone:"", web:"united.com",        notas:"" },
+  { id:"american",  name:"American Airlines",        code:"AA",   tipo:"aerolinea", pais:"USA",     contacto:"", email:"", phone:"", web:"aa.com",            notas:"" },
+  { id:"latam",     name:"LATAM Airlines",           code:"LA",   tipo:"aerolinea", pais:"Chile",   contacto:"", email:"", phone:"", web:"latam.com",         notas:"" },
+  { id:"iberia",    name:"Iberia",                   code:"IB",   tipo:"aerolinea", pais:"España",  contacto:"", email:"", phone:"", web:"iberia.com",        notas:"" },
+  // Mayoristas
+  { id:"accessrail",name:"AccessRail",               code:"AR",   tipo:"mayorista", pais:"USA",     contacto:"", email:"", phone:"", web:"accessrail.com",    notas:"" },
+  { id:"assistcard",name:"Assist-Card",              code:"AC",   tipo:"mayorista", pais:"Argentina",contacto:"",email:"", phone:"", web:"assistcard.com",   notas:"" },
+  { id:"hotelbeds", name:"Hotelbeds",                code:"HB",   tipo:"mayorista", pais:"España",  contacto:"", email:"", phone:"", web:"hotelbeds.com",     notas:"" },
+  { id:"tatajuba",  name:"Tatajuba Travel",          code:"TAT",  tipo:"mayorista", pais:"Brasil",  contacto:"", email:"", phone:"", web:"tatajuba.travel",   notas:"" },
+  { id:"hyperguest",name:"HyperGuest",               code:"HG",   tipo:"mayorista", pais:"Israel",  contacto:"", email:"", phone:"", web:"hyperguest.com",    notas:"" },
+  { id:"other",     name:"Otro",                     code:"OTR",  tipo:"mayorista", pais:"",        contacto:"", email:"", phone:"", web:"",                  notas:"" },
 ];
+// Para el selector en expedientes usamos este array simplificado
+const WHOLESALERS = WHOLESALERS_SEED;
 
 const CONCEPTS = ["HOTELES NACIONALES","HOTELES INTERNACIONALES","VUELOS NACIONALES","VUELOS INTERNACIONALES","TOURS Y EXCURSIONES","TRASLADOS","SEGUROS DE VIAJE","CRUCEROS","PAQUETES TURISTICOS","OTROS SERVICIOS"];
 const PAY_METHODS = ["Transferencia","Tarjeta crédito","Tarjeta débito","TPV/Tarjeta Crédito","Efectivo","Yappy","Zelle","PayPal","Cheque"];
@@ -2787,125 +2801,248 @@ function ReporteComisiones({ expedientes }) {
 
 // ─── FASE 2: CATÁLOGO BACK OFFICE ─────────────────────────────────────────────
 function CatalogoBackOffice() {
-  const [products, setProducts] = useState(CATALOG_PRODUCTS.map(p=>({...p})));
-  const [editing,  setEditing]  = useState(null);
-  const [search,   setSearch]   = useState("");
-  const [fCat,     setFCat]     = useState("all");
-  const [toast,    setToast]    = useState("");
+  const [tab, setTab] = useState("mayoristas");
+  const [proveedores, setProveedores] = useState(WHOLESALERS_SEED.map(p=>({...p})));
+  const [products,  setProducts]  = useState(CATALOG_PRODUCTS.map(p=>({...p})));
+  const [editProv,  setEditProv]  = useState(null);
+  const [editProd,  setEditProd]  = useState(null);
+  const [search,    setSearch]    = useState("");
+  const [toast,     setToast]     = useState("");
 
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(""),2500); };
-  const cats = ["all",...new Set(products.map(p=>p.concept))];
-  const filtered = products.filter(p =>
-    (fCat==="all"||p.concept===fCat) &&
-    (!search||p.name.toLowerCase().includes(search.toLowerCase())||p.concept.toLowerCase().includes(search.toLowerCase()))
+
+  const TABS = [
+    { id:"mayoristas", label:"🏢 Mayoristas",  count: proveedores.filter(p=>p.tipo==="mayorista").length },
+    { id:"aerolineas", label:"✈️ Aerolíneas",  count: proveedores.filter(p=>p.tipo==="aerolinea").length },
+    { id:"hoteles",    label:"🏨 Hoteles",      count: proveedores.filter(p=>p.tipo==="hotel").length },
+    { id:"productos",  label:"📦 Productos",    count: products.length },
+  ];
+
+  const PROV_EMPTY = (tipo) => ({
+    id:uid(), name:"", code:"", tipo, pais:"", contacto:"",
+    email:"", phone:"", web:"", notas:"",
+  });
+
+  const saveProv = p => {
+    setProveedores(prev => prev.find(x=>x.id===p.id) ? prev.map(x=>x.id===p.id?p:x) : [...prev,p]);
+    setEditProv(null); showToast("Guardado correctamente");
+  };
+  const delProv = id => { setProveedores(p=>p.filter(x=>x.id!==id)); showToast("Eliminado"); };
+
+  const saveProd = p => {
+    setProducts(prev=>{ const i=prev.findIndex(x=>x.id===p.id); if(i>=0){const n=[...prev];n[i]=p;return n;} return[p,...prev]; });
+    setEditProd(null); showToast("Producto guardado");
+  };
+  const delProd = id => { setProducts(p=>p.filter(x=>x.id!==id)); showToast("Producto eliminado"); };
+
+  const tipoMap = { mayoristas:"mayorista", aerolineas:"aerolinea", hoteles:"hotel" };
+  const filtProv = proveedores.filter(p =>
+    p.tipo === tipoMap[tab] &&
+    (!search || p.name.toLowerCase().includes(search.toLowerCase()) || (p.code||"").toLowerCase().includes(search.toLowerCase()))
+  );
+  const filtProd = products.filter(p =>
+    !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.concept.toLowerCase().includes(search.toLowerCase())
   );
 
-  const save = p => {
-    setProducts(prev=>{ const i=prev.findIndex(x=>x.id===p.id); if(i>=0){const n=[...prev];n[i]=p;return n;} return[p,...prev]; });
-    setEditing(null); showToast("Producto guardado");
-  };
-  const del = id => { setProducts(prev=>prev.filter(p=>p.id!==id)); showToast("Producto eliminado"); };
-  const newProd = () => setEditing({ id:uid(), concept:"HOTELES NACIONALES", wholesalerId:"bbr", name:"", description:"", base:0, iva:0, tua:0, others:0, csb:18, currency:"USD" });
+  // ── FORM PROVEEDOR ──
+  if(editProv) {
+    const upd = (f,v) => setEditProv(p=>({...p,[f]:v}));
+    const tipoLabel = editProv.tipo==="aerolinea"?"Aerolínea":editProv.tipo==="hotel"?"Hotel":"Mayorista";
+    return (
+      <div style={{ padding:18, maxWidth:700, margin:"0 auto" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+          <h2 style={{ margin:0, fontSize:16, fontWeight:800, color:B.dark }}>
+            {editProv.name || `Nuevo ${tipoLabel}`}
+          </h2>
+          <div style={{ display:"flex", gap:6 }}>
+            <Btn v="primary" sz="sm" onClick={()=>saveProv(editProv)}>💾 Guardar</Btn>
+            <Btn v="secondary" sz="sm" onClick={()=>setEditProv(null)}>← Cancelar</Btn>
+          </div>
+        </div>
+        <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:8, padding:20 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:12, marginBottom:12 }}>
+            <FI label={`Nombre del ${tipoLabel} *`} value={editProv.name} onChange={v=>upd("name",v)} placeholder={`Nombre completo...`}/>
+            <FI label="Código / IATA" value={editProv.code||""} onChange={v=>upd("code",v.toUpperCase())} placeholder="BBR, AF, HG..."/>
+            <FI label="País" value={editProv.pais||""} onChange={v=>upd("pais",v)} placeholder="Panama, USA..."/>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+            <FI label="Email de contacto" value={editProv.email||""} onChange={v=>upd("email",v)} placeholder="contacto@proveedor.com"/>
+            <FI label="Teléfono" value={editProv.phone||""} onChange={v=>upd("phone",v)} placeholder="+1 800-000-0000"/>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+            <FI label="Persona de contacto" value={editProv.contacto||""} onChange={v=>upd("contacto",v)} placeholder="Nombre del ejecutivo de cuenta"/>
+            <FI label="Sitio web" value={editProv.web||""} onChange={v=>upd("web",v)} placeholder="www.proveedor.com"/>
+          </div>
+          <FTA label="Notas internas" value={editProv.notas||""} onChange={v=>upd("notas",v)} rows={3}
+            placeholder="Condiciones especiales, comisiones acordadas, notas del contrato..."/>
+        </div>
+      </div>
+    );
+  }
 
-  const thS = { padding:"6px 9px", fontSize:9, fontWeight:700, color:"#546E7A", textAlign:"left" };
-
-  if (editing) {
-    const pub=(parseFloat(editing.base)||0)+(parseFloat(editing.iva)||0)+(parseFloat(editing.tua)||0)+(parseFloat(editing.others)||0);
-    const neta=pub*(1-(parseFloat(editing.csb)||0)/100);
-    const upd=(f,v)=>setEditing(p=>({...p,[f]:v}));
+  // ── FORM PRODUCTO ──
+  if(editProd) {
+    const pub=(parseFloat(editProd.base)||0)+(parseFloat(editProd.iva)||0)+(parseFloat(editProd.tua)||0)+(parseFloat(editProd.others)||0);
+    const neta=pub*(1-(parseFloat(editProd.csb)||0)/100);
+    const upd=(f,v)=>setEditProd(p=>({...p,[f]:v}));
     return (
       <div style={{ padding:18, maxWidth:900, margin:"0 auto" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-          <h2 style={{ margin:0, fontSize:16, color:B.dark, fontWeight:800 }}>{editing.name||"Nuevo producto/servicio"}</h2>
+          <h2 style={{ margin:0, fontSize:16, color:B.dark, fontWeight:800 }}>{editProd.name||"Nuevo producto/servicio"}</h2>
           <div style={{ display:"flex", gap:6 }}>
-            <Btn v="primary" sz="sm" onClick={()=>save(editing)}>💾 Guardar</Btn>
-            <Btn v="secondary" sz="sm" onClick={()=>setEditing(null)}>&larr; Cancelar</Btn>
+            <Btn v="primary" sz="sm" onClick={()=>saveProd(editProd)}>💾 Guardar</Btn>
+            <Btn v="secondary" sz="sm" onClick={()=>setEditProd(null)}>← Cancelar</Btn>
           </div>
         </div>
         <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:7, padding:16 }}>
           <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:10, marginBottom:10 }}>
-            <FI label="Nombre del producto/servicio *" value={editing.name} onChange={v=>upd("name",v)} placeholder="Gran Evenia Bijao — Todo Incluido"/>
-            <FS label="Concepto *" value={editing.concept} onChange={v=>upd("concept",v)} options={CONCEPTS.map(c=>({value:c,label:c}))}/>
-            <FS label="Mayorista *" value={editing.wholesalerId} onChange={v=>upd("wholesalerId",v)} options={WHOLESALERS.map(w=>({value:w.id,label:w.name}))}/>
+            <FI label="Nombre del producto/servicio *" value={editProd.name} onChange={v=>upd("name",v)} placeholder="Gran Evenia Bijao — Todo Incluido"/>
+            <FS label="Concepto *" value={editProd.concept} onChange={v=>upd("concept",v)} options={CONCEPTS.map(c=>({value:c,label:c}))}/>
+            <FS label="Proveedor *" value={editProd.wholesalerId} onChange={v=>upd("wholesalerId",v)} options={proveedores.map(w=>({value:w.id,label:w.name}))}/>
           </div>
-          <FTA label="Descripción" value={editing.description} onChange={v=>upd("description",v)} rows={5}
-            placeholder="Descripción detallada del servicio que aparecerá auto-rellenada en las partidas de venta..."/>
+          <FTA label="Descripción" value={editProd.description} onChange={v=>upd("description",v)} rows={5}
+            placeholder="Descripción detallada del servicio..."/>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:9, marginTop:10 }}>
-            <FI label="Base"   value={String(editing.base)}   onChange={v=>upd("base",  parseFloat(v)||0)} type="number"/>
-            <FI label="IVA $"  value={String(editing.iva)}    onChange={v=>upd("iva",   parseFloat(v)||0)} type="number"/>
-            <FI label="TUA"    value={String(editing.tua)}    onChange={v=>upd("tua",   parseFloat(v)||0)} type="number"/>
-            <FI label="Otros"  value={String(editing.others)} onChange={v=>upd("others",parseFloat(v)||0)} type="number"/>
-            <FI label="CSB %"  value={String(editing.csb)}    onChange={v=>upd("csb",   parseFloat(v)||0)} type="number"/>
-            <FS label="Divisa" value={editing.currency}        onChange={v=>upd("currency",v)} options={CURRENCIES.map(c=>({value:c,label:c}))}/>
+            <FI label="Base"   value={String(editProd.base)}   onChange={v=>upd("base",  parseFloat(v)||0)} type="number"/>
+            <FI label="IVA $"  value={String(editProd.iva)}    onChange={v=>upd("iva",   parseFloat(v)||0)} type="number"/>
+            <FI label="TUA"    value={String(editProd.tua)}    onChange={v=>upd("tua",   parseFloat(v)||0)} type="number"/>
+            <FI label="Otros"  value={String(editProd.others)} onChange={v=>upd("others",parseFloat(v)||0)} type="number"/>
+            <FI label="CSB %"  value={String(editProd.csb)}    onChange={v=>upd("csb",   parseFloat(v)||0)} type="number"/>
+            <FS label="Divisa" value={editProd.currency}       onChange={v=>upd("currency",v)} options={CURRENCIES.map(c=>({value:c,label:c}))}/>
           </div>
           <div style={{ display:"flex", gap:14, marginTop:9, padding:"9px 12px", background:"#F0F4FF", borderRadius:6, fontSize:11 }}>
             <span>Precio público: <b style={{ color:B.blue, fontSize:14 }}>${fmt(pub)}</b></span>
             <span>Precio neto: <b style={{ color:B.teal }}>${fmt(neta)}</b></span>
-            <span>Comisión CSB: <b style={{ color:B.gold }}>${fmt(pub-neta)} ({editing.csb||0}%)</b></span>
+            <span>Comisión CSB: <b style={{ color:B.gold }}>${fmt(pub-neta)} ({editProd.csb||0}%)</b></span>
           </div>
         </div>
       </div>
     );
   }
 
+  // ── LISTA PRINCIPAL ──
+  const tipoLabel = tab==="mayoristas"?"Mayorista":tab==="aerolineas"?"Aerolínea":"Hotel";
+  const tipoIcon  = tab==="mayoristas"?"🏢":tab==="aerolineas"?"✈️":"🏨";
+
   return (
     <div style={{ padding:18, maxWidth:1100, margin:"0 auto" }}>
       {toast&&<div style={{ position:"fixed", top:55, right:16, zIndex:9999, background:B.green, color:"#fff", borderRadius:6, padding:"8px 14px", fontSize:11, fontWeight:700 }}>✅ {toast}</div>}
-      <div style={{ display:"flex", gap:8, marginBottom:12, alignItems:"center", flexWrap:"wrap" }}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar producto o servicio..."
-          style={{ ...SI, flex:1, padding:"6px 11px", fontSize:11 }}/>
-        <select value={fCat} onChange={e=>setFCat(e.target.value)} style={{ ...SI, width:200, padding:"6px 9px", fontSize:11 }}>
-          {cats.map(c=><option key={c} value={c}>{c==="all"?"Todas las categorías":c}</option>)}
-        </select>
-        <Btn v="teal" onClick={newProd}>+ Nuevo producto</Btn>
+
+      {/* Tabs */}
+      <div style={{ display:"flex", gap:4, marginBottom:16, background:"#F1F5F9", padding:4, borderRadius:10, width:"fit-content" }}>
+        {TABS.map(t=>(
+          <button key={t.id} onClick={()=>{ setTab(t.id); setSearch(""); }}
+            style={{ padding:"7px 16px", borderRadius:7, border:"none", background:tab===t.id?"#fff":"transparent", color:tab===t.id?B.dark:"#546E7A", fontWeight:tab===t.id?700:500, fontSize:12, cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:6, boxShadow:tab===t.id?"0 1px 4px rgba(0,0,0,.08)":"none" }}>
+            {t.label}
+            <span style={{ background:tab===t.id?B.blue:"#E0E0E0", color:tab===t.id?"#fff":"#546E7A", fontSize:10, fontWeight:700, padding:"1px 6px", borderRadius:10 }}>{t.count}</span>
+          </button>
+        ))}
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:12 }}>
-        {filtered.map(p=>{
-          const pub=(parseFloat(p.base)||0)+(parseFloat(p.iva)||0)+(parseFloat(p.tua)||0)+(parseFloat(p.others)||0);
-          const neta=pub*(1-(parseFloat(p.csb)||0)/100);
-          const wh=WHOLESALERS.find(w=>w.id===p.wholesalerId)||WHOLESALERS[0];
-          return (
-            <div key={p.id} style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:8, overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,.06)" }}>
-              <div style={{ background:B.dark, color:"#fff", padding:"8px 12px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <span style={{ fontSize:9, fontWeight:700, letterSpacing:.6, textTransform:"uppercase", opacity:.8 }}>{p.concept}</span>
-                <div style={{ display:"flex", gap:5 }}>
-                  <button onClick={()=>setEditing({...p})} style={{ background:"rgba(255,255,255,.2)", border:"none", borderRadius:3, padding:"2px 7px", cursor:"pointer", color:"#fff", fontSize:9, fontFamily:"inherit" }}>✏️ Editar</button>
-                  <button onClick={()=>del(p.id)} style={{ background:"rgba(198,40,40,.4)", border:"none", borderRadius:3, padding:"2px 7px", cursor:"pointer", color:"#fff", fontSize:9, fontFamily:"inherit" }}>✕</button>
-                </div>
-              </div>
-              <div style={{ padding:"11px 13px" }}>
-                <div style={{ fontWeight:700, fontSize:12, color:"#263238", marginBottom:4 }}>{p.name}</div>
-                <div style={{ fontSize:9, color:"#546E7A", marginBottom:6 }}>{wh.name} · {p.currency}</div>
-                <div style={{ fontSize:9, color:"#90A4AE", whiteSpace:"pre-line", marginBottom:8, lineHeight:1.5 }}>
-                  {p.description.slice(0,120)}{p.description.length>120?"…":""}
-                </div>
-                <div style={{ display:"flex", gap:10, paddingTop:8, borderTop:"1px solid #F0F0F0" }}>
-                  <div style={{ textAlign:"center" }}>
-                    <div style={{ fontSize:8, color:"#546E7A" }}>PÚBLICA</div>
-                    <div style={{ fontSize:14, fontWeight:900, color:B.blue }}>${fmt(pub)}</div>
-                  </div>
-                  <div style={{ textAlign:"center" }}>
-                    <div style={{ fontSize:8, color:"#546E7A" }}>NETA</div>
-                    <div style={{ fontSize:13, fontWeight:700, color:B.teal }}>${fmt(neta)}</div>
-                  </div>
-                  <div style={{ textAlign:"center" }}>
-                    <div style={{ fontSize:8, color:"#546E7A" }}>CSB</div>
-                    <div style={{ fontSize:13, fontWeight:700, color:B.gold }}>{p.csb}%</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        {filtered.length===0&&(
-          <div style={{ gridColumn:"1/-1", textAlign:"center", padding:40, color:"#B0BEC5", fontSize:11 }}>
-            <div style={{ fontSize:32, marginBottom:8 }}>📦</div>
-            Sin productos.<br/>
-            <Btn v="outline" style={{ marginTop:10 }} onClick={newProd}>Crear primer producto</Btn>
-          </div>
+      {/* Barra de búsqueda + botón nuevo */}
+      <div style={{ display:"flex", gap:8, marginBottom:14, alignItems:"center" }}>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder={`🔍 Buscar ${tab==="productos"?"producto o servicio":tipoLabel.toLowerCase()}...`}
+          style={{ ...SI, flex:1, padding:"6px 11px", fontSize:11 }}/>
+        {tab !== "productos" ? (
+          <Btn v="teal" onClick={()=>setEditProv(PROV_EMPTY(tipoMap[tab]))}>+ Nuevo {tipoLabel}</Btn>
+        ) : (
+          <Btn v="teal" onClick={()=>setEditProd({ id:uid(), concept:"HOTELES NACIONALES", wholesalerId:proveedores[0]?.id||"other", name:"", description:"", base:0, iva:0, tua:0, others:0, csb:18, currency:"USD" })}>+ Nuevo producto</Btn>
         )}
       </div>
+
+      {/* ── TABLA PROVEEDORES (mayoristas / aerolíneas / hoteles) ── */}
+      {tab !== "productos" && (
+        <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:8, overflow:"hidden" }}>
+          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
+            <thead>
+              <tr style={{ background:B.dark, color:"#fff" }}>
+                {[tipoIcon+" Nombre","Código","País","Email","Teléfono","Contacto","Web",""].map(h=>(
+                  <th key={h} style={{ padding:"8px 10px", textAlign:"left", fontSize:9, fontWeight:700 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtProv.length===0&&(
+                <tr><td colSpan={8} style={{ textAlign:"center", padding:32, color:"#B0BEC5", fontSize:11 }}>
+                  <div style={{ fontSize:28, marginBottom:8 }}>{tipoIcon}</div>
+                  Sin {tab}. <button onClick={()=>setEditProv(PROV_EMPTY(tipoMap[tab]))} style={{ background:"none", border:"none", color:B.blue, cursor:"pointer", fontSize:11, textDecoration:"underline", fontFamily:"inherit" }}>Agregar {tipoLabel.toLowerCase()}</button>
+                </td></tr>
+              )}
+              {filtProv.map((p,i)=>(
+                <tr key={p.id} style={{ background:i%2===0?"#fff":"#FAFAFA", borderBottom:"1px solid #F0F0F0", cursor:"pointer" }}
+                  onMouseEnter={e=>e.currentTarget.style.background="#E3F2FD"}
+                  onMouseLeave={e=>e.currentTarget.style.background=i%2===0?"#fff":"#FAFAFA"}>
+                  <td style={{ padding:"9px 10px", fontWeight:700, color:B.blue }} onClick={()=>setEditProv({...p})}>{p.name}</td>
+                  <td style={{ padding:"9px 10px" }}>
+                    {p.code&&<span style={{ background:"#EDE7F6", color:"#512DA8", padding:"2px 7px", borderRadius:4, fontSize:10, fontWeight:700 }}>{p.code}</span>}
+                  </td>
+                  <td style={{ padding:"9px 10px", color:"#546E7A" }}>{p.pais||"—"}</td>
+                  <td style={{ padding:"9px 10px", color:"#546E7A", fontSize:10 }}>{p.email||"—"}</td>
+                  <td style={{ padding:"9px 10px", color:"#546E7A" }}>{p.phone||"—"}</td>
+                  <td style={{ padding:"9px 10px", color:"#546E7A" }}>{p.contacto||"—"}</td>
+                  <td style={{ padding:"9px 10px" }}>
+                    {p.web ? <a href={`https://${p.web.replace(/^https?:\/\//,"")}`} target="_blank" rel="noopener noreferrer" style={{ color:B.blue, fontSize:10, textDecoration:"none" }}>{p.web}</a> : "—"}
+                  </td>
+                  <td style={{ padding:"9px 10px", textAlign:"center" }}>
+                    <button onClick={()=>setEditProv({...p})} style={{ background:B.blue, border:"none", color:"#fff", borderRadius:4, padding:"3px 8px", cursor:"pointer", fontSize:10, marginRight:4 }}>✏️</button>
+                    <button onClick={()=>delProv(p.id)} style={{ background:"none", border:"none", cursor:"pointer", color:"#B0BEC5", fontSize:14 }}>✕</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── GRID PRODUCTOS ── */}
+      {tab === "productos" && (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:12 }}>
+          {filtProd.map(p=>{
+            const pub=(parseFloat(p.base)||0)+(parseFloat(p.iva)||0)+(parseFloat(p.tua)||0)+(parseFloat(p.others)||0);
+            const neta=pub*(1-(parseFloat(p.csb)||0)/100);
+            const wh=proveedores.find(w=>w.id===p.wholesalerId)||{name:"Otro"};
+            return (
+              <div key={p.id} style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:8, overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,.06)" }}>
+                <div style={{ background:B.dark, color:"#fff", padding:"8px 12px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <span style={{ fontSize:9, fontWeight:700, letterSpacing:.6, textTransform:"uppercase", opacity:.8 }}>{p.concept}</span>
+                  <div style={{ display:"flex", gap:5 }}>
+                    <button onClick={()=>setEditProd({...p})} style={{ background:"rgba(255,255,255,.2)", border:"none", borderRadius:3, padding:"2px 7px", cursor:"pointer", color:"#fff", fontSize:9, fontFamily:"inherit" }}>✏️ Editar</button>
+                    <button onClick={()=>delProd(p.id)} style={{ background:"rgba(198,40,40,.4)", border:"none", borderRadius:3, padding:"2px 7px", cursor:"pointer", color:"#fff", fontSize:9, fontFamily:"inherit" }}>✕</button>
+                  </div>
+                </div>
+                <div style={{ padding:"11px 13px" }}>
+                  <div style={{ fontWeight:700, fontSize:12, color:"#263238", marginBottom:4 }}>{p.name}</div>
+                  <div style={{ fontSize:9, color:"#546E7A", marginBottom:6 }}>{wh.name} · {p.currency}</div>
+                  <div style={{ fontSize:9, color:"#90A4AE", whiteSpace:"pre-line", marginBottom:8, lineHeight:1.5 }}>
+                    {p.description.slice(0,120)}{p.description.length>120?"…":""}
+                  </div>
+                  <div style={{ display:"flex", gap:10, paddingTop:8, borderTop:"1px solid #F0F0F0" }}>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:8, color:"#546E7A" }}>PÚBLICA</div>
+                      <div style={{ fontSize:14, fontWeight:900, color:B.blue }}>${fmt(pub)}</div>
+                    </div>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:8, color:"#546E7A" }}>NETA</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:B.teal }}>${fmt(neta)}</div>
+                    </div>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:8, color:"#546E7A" }}>CSB</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:B.gold }}>{p.csb}%</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {filtProd.length===0&&(
+            <div style={{ gridColumn:"1/-1", textAlign:"center", padding:40, color:"#B0BEC5", fontSize:11 }}>
+              <div style={{ fontSize:32, marginBottom:8 }}>📦</div>
+              Sin productos.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
