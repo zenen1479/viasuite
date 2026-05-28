@@ -100,13 +100,30 @@ const dbToClient = r => ({
   docs: [],
 });
 
-const clientToDB = c => ({
+const clientToDB = (c, agencyId) => ({
   cat: c.cat, status: c.status, advisor_id: c.advisorId,
-  first_name: c.firstName, last_name_p: c.lastNameP, last_name_m: c.lastNameM,
-  birthdate: c.birthdate||null, mobile: c.mobile, phone: c.phone,
-  email: c.email, email2: c.email2, address: c.address, city: c.city,
-  country: c.country, nationality: c.nationality, notes: c.notes,
-  how_know: c.howKnow, recommended: c.recommended, contact: c.contact,
+  agency_id: agencyId || c.agencyId || null,
+  tipo: c.tipo || "persona",
+  client_no: c.clientNo || null,
+  // Persona
+  first_name: c.firstName||"", last_name_p: c.lastNameP||"", last_name_m: c.lastNameM||"",
+  birthdate: c.birthdate||null,
+  // Empresa
+  razon_social: c.razonSocial||null, ruc: c.ruc||null, representante: c.representante||null,
+  // Contacto
+  mobile: c.mobile||"", phone: c.phone||"", office_phone: c.officePhone||null,
+  email: c.email||"", email2: c.email2||"",
+  address: c.address||"", colonia: c.colonia||null, city: c.city||"",
+  cp: c.cp||null, state: c.state||null, country: c.country||"Panama",
+  nationality: c.nationality||"Panama - PA",
+  contact: c.contact||null, recommended: c.recommended||null, how_know: c.howKnow||null,
+  notes: c.notes||"",
+  // Documentos (JSON)
+  passport: c.passport ? JSON.stringify(c.passport) : null,
+  visas: c.visas?.length ? JSON.stringify(c.visas) : null,
+  relaciones: c.relaciones?.length ? JSON.stringify(c.relaciones) : null,
+  // Fiscal
+  tax_id: c.taxId||null, tax_name: c.taxName||null, tax_address: c.taxAddress||null,
 });
 
 const dbToExp = (r, items=[], payments=[], majorPayments=[], alarms=[]) => ({
@@ -5751,7 +5768,7 @@ export default function App() {
       if (!rows.length) return null;
       const u = rows[0];
       if (u.password_hash !== password) return null;
-      const loggedUser = { id:u.id, advisorId:u.advisor_id, name:u.name, email:u.email, role:u.role, avatar:u.avatar||u.name.charAt(0) };
+      const loggedUser = { id:u.id, advisorId:u.advisor_id, agencyId:u.agency_id, name:u.name, email:u.email, role:u.role, avatar:u.avatar||u.name.charAt(0) };
       await loadClients(); await loadExps();
       return loggedUser;
     } catch(e) {
@@ -5790,7 +5807,7 @@ export default function App() {
     try {
       if (dbOnline) {
         const exists = await supa.get("clients",`?id=eq.${c.id}`);
-        if (exists.length>0) { await supa.patch("clients",c.id,clientToDB(c)); } else { await supa.post("clients",{...clientToDB(c),id:c.id}); }
+        if (exists.length>0) { await supa.patch("clients",c.id,clientToDB(c,user.agencyId)); } else { await supa.post("clients",{...clientToDB(c,user.agencyId),id:c.id}); }
         await loadClients(); showToast("Cliente guardado en la nube");
       } else {
         setClients(p=>{const i=p.findIndex(x=>x.id===c.id);if(i>=0){const n=[...p];n[i]=c;return n;}return[c,...p];});
