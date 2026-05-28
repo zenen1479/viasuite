@@ -74,14 +74,29 @@ const supa = {
 
 // ─── DATA HELPERS (convert DB rows to app format) ─────────────────────────────
 const dbToClient = r => ({
-  id: r.id, created: r.created_at?.slice(0,10), cat: r.cat||"GENERAL",
-  status: r.status||"activo", advisorId: r.advisor_id,
+  id: r.id, created: r.created_at?.slice(0,10),
+  clientNo: r.client_no||"",
+  tipo: r.tipo||"persona",
+  cat: r.cat||"GENERAL", status: r.status||"activo", advisorId: r.advisor_id,
+  // Persona
   firstName: r.first_name||"", lastNameP: r.last_name_p||"", lastNameM: r.last_name_m||"",
   birthdate: r.birthdate||"", alta: r.created_at?.slice(0,10)||"",
-  mobile: r.mobile||"", phone: r.phone||"", email: r.email||"", email2: r.email2||"",
-  address: r.address||"", city: r.city||"", country: r.country||"Panama",
-  nationality: r.nationality||"Panama - PA", notes: r.notes||"",
-  howKnow: r.how_know||"", recommended: r.recommended||"", contact: r.contact||"",
+  // Empresa
+  razonSocial: r.razon_social||"", ruc: r.ruc||"", representante: r.representante||"",
+  // Contacto
+  mobile: r.mobile||"", phone: r.phone||"", officePhone: r.office_phone||"",
+  email: r.email||"", email2: r.email2||"",
+  address: r.address||"", colonia: r.colonia||"", city: r.city||"",
+  cp: r.cp||"", state: r.state||"", country: r.country||"Panama",
+  nationality: r.nationality||"Panama - PA",
+  contact: r.contact||"", recommended: r.recommended||"", howKnow: r.how_know||"",
+  notes: r.notes||"",
+  // Documentos
+  passport: r.passport ? JSON.parse(r.passport) : { numero:"", vencimiento:"", foto:null },
+  visas: r.visas ? JSON.parse(r.visas) : [],
+  relaciones: r.relaciones ? JSON.parse(r.relaciones) : [],
+  // Fiscal
+  taxId: r.tax_id||"", taxName: r.tax_name||"", taxAddress: r.tax_address||"",
   docs: [],
 });
 
@@ -292,7 +307,34 @@ const mkItem   = () => ({ id:uid(), concept:"HOTELES NACIONALES", wholesalerId:"
 const mkPay    = () => ({ id:uid(), date:today(), agentId:"1", account:"BG corriente 69-1", method:"Transferencia", reference:"", amount:0, confirmed:true, receipt:String(Math.floor(10000+Math.random()*90000)), note:"" });
 const mkMPay   = () => ({ id:uid(), date:today(), agentId:"1", account:"", method:"Transferencia", reference:"", amount:0, confirmed:true, receipt:String(Math.floor(500000+Math.random()*100000)), note:"" });
 const mkAlarm  = (type="manual") => ({ id:uid(), type, date:today(), note:"", status:"pending", source:"manual", createdAt:today() });
-const mkClient = () => ({ id:uid(), created:today(), cat:"GENERAL", status:"activo", advisorId:"1", firstName:"", lastNameP:"", lastNameM:"", birthdate:"", alta:today(), mobile:"", phone:"", email:"", email2:"", address:"", city:"", country:"Panama", nationality:"Panama - PA", notes:"", docs:[] });
+// Número de cliente autogenerado desde 1000
+let _clientCounter = 1000;
+const nextClientNo = (existingClients=[]) => {
+  const nums = existingClients.map(c=>parseInt(c.clientNo)||0).filter(Boolean);
+  const max = nums.length ? Math.max(...nums) : 999;
+  return String(max + 1).padStart(4,"0");
+};
+const mkClient = (existingClients=[]) => ({
+  id:uid(), created:today(), clientNo: nextClientNo(existingClients),
+  tipo:"persona", // "persona" | "empresa"
+  cat:"GENERAL", status:"activo", advisorId:"1",
+  // Persona natural
+  firstName:"", lastNameP:"", lastNameM:"", birthdate:"",
+  // Empresa
+  razonSocial:"", ruc:"", representante:"",
+  // Común
+  alta:today(), mobile:"", phone:"", officePhone:"", email:"", email2:"",
+  address:"", colonia:"", city:"", cp:"00000", state:"", country:"Panama",
+  nationality:"Panama - PA", contact:"", recommended:"", howKnow:"", notes:"",
+  // Pasaporte y documentos
+  passport:{ numero:"", vencimiento:"", foto:null },
+  visas:[],
+  // Relaciones familiares/amigos
+  relaciones:[],
+  // Fiscal
+  taxId:"", taxName:"", taxAddress:"",
+  docs:[],
+});
 const mkExp    = () => ({ id:uid(), no:Math.floor(7000+Math.random()*500), ventaNo:Math.floor(6500+Math.random()*500), created:today(), status:"nuevo", advisorId:"1", medium:"WHATSAPP", clientId:"", clientName:"", trip:{ title:"", destination:"", dateFrom:"", dateTo:"", paxAdult:2, paxChild:0, category:"" }, items:[], payments:[], majorPayments:[], alarms:[], contract:null, notes:"" });
 
 // ─── UI ───────────────────────────────────────────────────────────────────────
@@ -1291,90 +1333,289 @@ function CliForm({ client, onSave, onBack }) {
   const [c, setC]  = useState(() => JSON.parse(JSON.stringify(client)));
   const [tab, setTab] = useState("personales");
   const upd = (f,v) => setC(p => ({ ...p, [f]: v }));
-  const name = [c.firstName, c.lastNameP, c.lastNameM].filter(Boolean).join(" ");
+  const isEmpresa = c.tipo === "empresa";
+  const name = isEmpresa ? (c.razonSocial||"Nueva empresa") : [c.firstName, c.lastNameP, c.lastNameM].filter(Boolean).join(" ");
+
+  // Alarma de vencimiento de pasaporte (6 meses)
+  const passportAlert = () => {
+    if(!c.passport?.vencimiento) return null;
+    const venc = new Date(c.passport.vencimiento);
+    const sixMonths = new Date(); sixMonths.setMonth(sixMonths.getMonth()+6);
+    if(venc < new Date()) return { level:"danger", msg:"⚠️ Pasaporte VENCIDO" };
+    if(venc < sixMonths) return { level:"warning", msg:"🔔 Pasaporte vence en menos de 6 meses" };
+    return null;
+  };
+  const passAlert = passportAlert();
 
   const TABS = [
-    { id:"personales", label:"Personales" },
-    { id:"fiscales",   label:"Fiscales" },
-    { id:"pasajeros",  label:"Pasajeros" },
+    { id:"personales", label: isEmpresa ? "Empresa" : "Personales" },
+    { id:"documentos", label:"Documentos" },
+    { id:"fiscales",   label:"Fiscal" },
+    { id:"relaciones", label:"Relaciones" },
     { id:"historial",  label:"Historial" },
   ];
 
+  const RELACION_TIPOS = ["Cónyuge/Pareja","Hijo/a","Padre/Madre","Hermano/a","Amigo/a","Familiar","Colega","Otro"];
+
   return (
     <div style={{ padding:18, maxWidth:980, margin:"0 auto" }}>
+      {/* Header */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:7 }}>
         <div>
-          <h2 style={{ margin:0, fontSize:16, color:B.dark, fontWeight:800 }}>Cliente: {name||"Nuevo cliente"}</h2>
-          <div style={{ marginTop:5 }}>
-            <input placeholder="Buscar cliente o pasajero existente" style={{ ...SI, width:280, padding:"4px 8px", fontSize:10 }}/>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <h2 style={{ margin:0, fontSize:16, color:B.dark, fontWeight:800 }}>
+              {isEmpresa ? "🏢" : "👤"} {name||"Nuevo cliente"}
+            </h2>
+            {c.clientNo && (
+              <span style={{ background:"#EDE7F6", color:"#512DA8", padding:"2px 8px", borderRadius:5, fontSize:11, fontWeight:700 }}>
+                #{c.clientNo}
+              </span>
+            )}
+            {c.tipo==="persona" && c.cat==="VIP" && <span style={{ background:"#FFF8E1", color:"#F9A825", padding:"2px 8px", borderRadius:5, fontSize:10, fontWeight:700 }}>⭐ VIP</span>}
           </div>
+          {passAlert && (
+            <div style={{ marginTop:6, padding:"4px 10px", borderRadius:5, background: passAlert.level==="danger"?"#FFEBEE":"#FFF8E1", color: passAlert.level==="danger"?"#C62828":"#F9A825", fontSize:11, fontWeight:700 }}>
+              {passAlert.msg}
+            </div>
+          )}
         </div>
-        <div style={{ display:"flex", gap:5 }}>
-          <Btn v="primary" sz="sm" onClick={() => onSave(c)}>Actualizar datos</Btn>
+        <div style={{ display:"flex", gap:5, alignItems:"center" }}>
+          {/* Selector tipo */}
+          <div style={{ display:"flex", background:"#F1F5F9", borderRadius:7, padding:3, gap:2 }}>
+            {["persona","empresa"].map(t=>(
+              <button key={t} onClick={()=>upd("tipo",t)}
+                style={{ padding:"4px 12px", borderRadius:5, border:"none", background:c.tipo===t?"#fff":"transparent", color:c.tipo===t?B.dark:"#546E7A", fontWeight:c.tipo===t?700:400, fontSize:11, cursor:"pointer", fontFamily:"inherit" }}>
+                {t==="persona"?"👤 Persona":"🏢 Empresa"}
+              </button>
+            ))}
+          </div>
+          <Btn v="primary" sz="sm" onClick={() => onSave(c)}>Guardar</Btn>
           <Btn v="secondary" sz="sm" onClick={onBack}>&larr; Atrás</Btn>
         </div>
       </div>
 
       <Tabs tabs={TABS} active={tab} onSelect={setTab}/>
 
+      {/* ── TAB PERSONALES / EMPRESA ── */}
       {tab==="personales" && (
         <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, padding:16 }}>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:9, marginBottom:9 }}>
-            <FS label="Categoría Cliente" value={c.cat} onChange={v => upd("cat",v)} options={CLI_CATS.map(x => ({value:x,label:x}))}/>
+            <FS label="Categoría" value={c.cat} onChange={v => upd("cat",v)} options={CLI_CATS.map(x => ({value:x,label:x}))}/>
             <FS label="Estatus" value={c.status} onChange={v => upd("status",v)} options={[{value:"activo",label:"Activo"},{value:"inactivo",label:"Inactivo"}]}/>
-            <FS label="Formato" value={c.format||"Activado"} onChange={v => upd("format",v)} options={["Activado","Desactivado"].map(x => ({value:x,label:x}))}/>
+            <FS label="Agente" value={c.advisorId} onChange={v => upd("advisorId",v)} options={ADVISORS.map(a => ({value:a.id,label:a.name}))}/>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr 1fr", gap:9, marginBottom:9 }}>
-            <FI label="Nombre(s)*"       value={c.firstName} onChange={v => upd("firstName",v)}/>
-            <FI label="Apellido Paterno*" value={c.lastNameP} onChange={v => upd("lastNameP",v)}/>
-            <FI label="Apellido Materno"  value={c.lastNameM} onChange={v => upd("lastNameM",v)}/>
-            <FI label="Fecha Nacimiento"  value={c.birthdate} onChange={v => upd("birthdate",v)} type="date"/>
-            <FI label="Fecha Alta"        value={c.alta}      onChange={v => upd("alta",v)}      type="date"/>
-            <FS label="Agente"            value={c.advisorId} onChange={v => upd("advisorId",v)}
-              options={ADVISORS.map(a => ({value:a.id,label:a.name}))}/>
-          </div>
+
+          {/* PERSONA NATURAL */}
+          {!isEmpresa && (<>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr", gap:9, marginBottom:9 }}>
+              <FI label="Nombre(s)*"        value={c.firstName} onChange={v => upd("firstName",v)}/>
+              <FI label="Apellido Paterno*" value={c.lastNameP} onChange={v => upd("lastNameP",v)}/>
+              <FI label="Apellido Materno"  value={c.lastNameM} onChange={v => upd("lastNameM",v)}/>
+              <FI label="Fecha Nacimiento"  value={c.birthdate} onChange={v => upd("birthdate",v)} type="date"/>
+              <FI label="Fecha Alta"        value={c.alta}      onChange={v => upd("alta",v)}      type="date"/>
+            </div>
+          </>)}
+
+          {/* EMPRESA */}
+          {isEmpresa && (<>
+            <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:9, marginBottom:9 }}>
+              <FI label="Razón Social *"     value={c.razonSocial||""} onChange={v => upd("razonSocial",v)} placeholder="Nombre legal de la empresa"/>
+              <FI label="RUC / NIT"           value={c.ruc||""}         onChange={v => upd("ruc",v)}         placeholder="RUC o NIT..."/>
+              <FI label="Representante legal" value={c.representante||""} onChange={v => upd("representante",v)} placeholder="Nombre del representante"/>
+            </div>
+          </>)}
+
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr", gap:9, marginBottom:9 }}>
-            <FI label="Móvil"           value={c.mobile}      onChange={v => upd("mobile",v)}      placeholder="+507 6000-0000"/>
-            <FI label="Telefono Casa"   value={c.phone}       onChange={v => upd("phone",v)}/>
-            <FI label="Telefono Oficina" value={c.officePhone||""} onChange={v => upd("officePhone",v)}/>
-            <FI label="Email *"         value={c.email}       onChange={v => upd("email",v)}       placeholder="correo@email.com"/>
-            <FI label="Email 2"         value={c.email2}      onChange={v => upd("email2",v)}/>
+            <FI label="Móvil / WhatsApp"   value={c.mobile}          onChange={v => upd("mobile",v)}      placeholder="+507 6000-0000"/>
+            <FI label="Teléfono casa"      value={c.phone}           onChange={v => upd("phone",v)}/>
+            <FI label="Teléfono oficina"   value={c.officePhone||""} onChange={v => upd("officePhone",v)}/>
+            <FI label="Email *"            value={c.email}           onChange={v => upd("email",v)}       placeholder="correo@email.com"/>
+            <FI label="Email 2"            value={c.email2}          onChange={v => upd("email2",v)}/>
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:9, marginBottom:9 }}>
-            <FI label="Dirección"  value={c.address}  onChange={v => upd("address",v)}/>
-            <FI label="Colonia"    value={c.colonia||""} onChange={v => upd("colonia",v)}/>
-            <FI label="Ciudad"     value={c.city}     onChange={v => upd("city",v)}/>
-            <FI label="C.P."       value={c.cp||"00000"} onChange={v => upd("cp",v)}/>
+            <FI label="Dirección" value={c.address}    onChange={v => upd("address",v)}/>
+            <FI label="Colonia"   value={c.colonia||""} onChange={v => upd("colonia",v)}/>
+            <FI label="Ciudad"    value={c.city}        onChange={v => upd("city",v)}/>
+            <FI label="C.P."      value={c.cp||""}      onChange={v => upd("cp",v)}/>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr 1fr", gap:9, marginBottom:14 }}>
-            <FI label="Estado"   value={c.state||""} onChange={v => upd("state",v)}/>
-            <FI label="País"     value={c.country}   onChange={v => upd("country",v)}/>
-            <FS label="Nacionalidad" value={c.nationality} onChange={v => upd("nationality",v)}
-              options={["Panama - PA","Mexico - MX","Colombia - CO","Venezuela - VE","USA - US","España - ES","Otro"].map(x => ({value:x,label:x}))}/>
-            <FI label="Contacto"   value={c.contact||""}  onChange={v => upd("contact",v)}/>
-            <FI label="Recomendó"  value={c.recommended||""} onChange={v => upd("recommended",v)}/>
-            <FI label="Como supo"  value={c.howKnow||""}  onChange={v => upd("howKnow",v)}/>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr 1fr", gap:9, marginBottom:9 }}>
+            <FI label="Estado/Provincia" value={c.state||""}       onChange={v => upd("state",v)}/>
+            <FI label="País"             value={c.country}         onChange={v => upd("country",v)}/>
+            <FS label="Nacionalidad"     value={c.nationality}     onChange={v => upd("nationality",v)}
+              options={["Panama - PA","Mexico - MX","Colombia - CO","Venezuela - VE","USA - US","España - ES","Argentina - AR","Chile - CL","Otro"].map(x => ({value:x,label:x}))}/>
+            <FI label="Contacto"    value={c.contact||""}     onChange={v => upd("contact",v)}/>
+            <FI label="Recomendó"   value={c.recommended||""} onChange={v => upd("recommended",v)}/>
+            <FI label="Cómo supo"   value={c.howKnow||""}    onChange={v => upd("howKnow",v)}/>
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:9 }}>
-            <FTA label="Como supo (detalles)" value={c.howKnow||""} onChange={v => upd("howKnow",v)} rows={2}/>
-            <FTA label="Notas"                value={c.notes}       onChange={v => upd("notes",v)}   rows={2}/>
+            <FTA label="Notas internas" value={c.notes} onChange={v => upd("notes",v)} rows={2}/>
           </div>
-          <div style={{ marginTop:14, textAlign:"center" }}>
-            <Btn v="teal" sz="lg" full onClick={() => onSave(c)}>Actualizar datos</Btn>
-          </div>
-          <div style={{ marginTop:14, paddingTop:10, borderTop:"1px solid #E0E0E0" }}>
-            <div style={{ fontWeight:700, fontSize:10, color:"#546E7A", marginBottom:7 }}>
-              Documentos Migratorios <span style={{ color:B.blue, cursor:"pointer", fontSize:12 }}>+</span>
-            </div>
-            {(c.docs||[]).length===0 && <div style={{ color:"#B0BEC5", fontSize:10 }}>No hay documentos para este cliente</div>}
+          <div style={{ marginTop:14, textAlign:"right" }}>
+            <Btn v="teal" sz="lg" onClick={() => onSave(c)}>Guardar cliente</Btn>
           </div>
         </div>
       )}
 
-      {tab!=="personales" && (
-        <div style={{ textAlign:"center", padding:30, color:"#B0BEC5", fontSize:11 }}>
-          <div style={{ fontSize:28, marginBottom:8 }}>🔧</div>
-          Módulo en construcción — Fase 2
+      {/* ── TAB DOCUMENTOS ── */}
+      {tab==="documentos" && (
+        <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, padding:16 }}>
+
+          {/* Pasaporte */}
+          <div style={{ marginBottom:20 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:B.dark, marginBottom:12, display:"flex", alignItems:"center", gap:8 }}>
+              🛂 Pasaporte
+              {passAlert && (
+                <span style={{ padding:"2px 9px", borderRadius:5, fontSize:10, fontWeight:700, background: passAlert.level==="danger"?"#FFEBEE":"#FFF8E1", color: passAlert.level==="danger"?"#C62828":"#F9A825" }}>
+                  {passAlert.msg}
+                </span>
+              )}
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:12 }}>
+              <FI label="Número de pasaporte" value={c.passport?.numero||""} onChange={v=>upd("passport",{...c.passport,numero:v})} placeholder="AB123456"/>
+              <FI label="Fecha de vencimiento" value={c.passport?.vencimiento||""} onChange={v=>upd("passport",{...c.passport,vencimiento:v})} type="date"/>
+              <div>
+                <div style={{ fontSize:10, fontWeight:700, color:"#546E7A", marginBottom:6 }}>FOTO DEL PASAPORTE</div>
+                <label style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", border:"1px dashed #BBDEFB", borderRadius:6, cursor:"pointer", fontSize:11, color:B.blue }}>
+                  <span>📎</span>
+                  {c.passport?.foto ? "✓ Foto cargada — clic para cambiar" : "Cargar foto del pasaporte"}
+                  <input type="file" accept="image/*,.pdf" style={{ display:"none" }}
+                    onChange={e=>{
+                      const file = e.target.files[0];
+                      if(!file) return;
+                      const reader = new FileReader();
+                      reader.onload = ev => upd("passport",{...c.passport,foto:ev.target.result,fotoName:file.name});
+                      reader.readAsDataURL(file);
+                    }}/>
+                </label>
+                {c.passport?.foto && (
+                  <div style={{ marginTop:6, display:"flex", alignItems:"center", gap:6 }}>
+                    <span style={{ fontSize:10, color:"#546E7A" }}>📄 {c.passport.fotoName||"Foto cargada"}</span>
+                    <button onClick={()=>upd("passport",{...c.passport,foto:null,fotoName:""})} style={{ background:"none",border:"none",cursor:"pointer",color:"#EF5350",fontSize:11 }}>✕ Eliminar</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Visas */}
+          <div style={{ borderTop:"1px solid #F0F0F0", paddingTop:16 }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:B.dark }}>🪪 Visas</div>
+              <button onClick={()=>upd("visas",[...(c.visas||[]),{id:uid(),pais:"",tipo:"",numero:"",vencimiento:"",foto:null}])}
+                style={{ background:B.blue, color:"#fff", border:"none", borderRadius:6, padding:"4px 12px", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                + Agregar visa
+              </button>
+            </div>
+            {(c.visas||[]).length===0 && <div style={{ color:"#B0BEC5", fontSize:11, textAlign:"center", padding:16 }}>No hay visas registradas</div>}
+            {(c.visas||[]).map((v,i)=>{
+              const vencDate = v.vencimiento ? new Date(v.vencimiento) : null;
+              const sixMo = new Date(); sixMo.setMonth(sixMo.getMonth()+6);
+              const visaAlert = vencDate && vencDate < new Date() ? "VENCIDA" : vencDate && vencDate < sixMo ? "POR VENCER" : null;
+              return (
+                <div key={v.id} style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr auto", gap:9, marginBottom:8, padding:"10px 12px", background:"#F8FAFC", borderRadius:8, border:"1px solid #E0E0E0" }}>
+                  <FI label="País" value={v.pais} onChange={val=>upd("visas",(c.visas||[]).map((x,j)=>j===i?{...x,pais:val}:x))} placeholder="USA, Schengen..."/>
+                  <FI label="Tipo" value={v.tipo} onChange={val=>upd("visas",(c.visas||[]).map((x,j)=>j===i?{...x,tipo:val}:x))} placeholder="Turista, Trabajo..."/>
+                  <FI label="Número" value={v.numero||""} onChange={val=>upd("visas",(c.visas||[]).map((x,j)=>j===i?{...x,numero:val}:x))} placeholder="V123456"/>
+                  <div>
+                    <FI label="Vencimiento" value={v.vencimiento} onChange={val=>upd("visas",(c.visas||[]).map((x,j)=>j===i?{...x,vencimiento:val}:x))} type="date"/>
+                    {visaAlert && <div style={{ fontSize:9, fontWeight:700, color: visaAlert==="VENCIDA"?"#C62828":"#F9A825", marginTop:2 }}>⚠️ {visaAlert}</div>}
+                  </div>
+                  <button onClick={()=>upd("visas",(c.visas||[]).filter((_,j)=>j!==i))}
+                    style={{ background:"none", border:"none", cursor:"pointer", color:"#EF5350", fontSize:18, alignSelf:"center", marginTop:12 }}>✕</button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB FISCAL ── */}
+      {tab==="fiscales" && (
+        <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, padding:16 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:B.dark, marginBottom:16 }}>🧾 Datos fiscales del cliente</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <FI label="RUC / NIT / RFC" value={c.taxId||""} onChange={v=>upd("taxId",v)} placeholder="Número de contribuyente"/>
+            <FI label="Razón social / Nombre fiscal" value={c.taxName||""} onChange={v=>upd("taxName",v)} placeholder="Nombre para facturación"/>
+            <div style={{ gridColumn:"1/-1" }}>
+              <FI label="Dirección fiscal" value={c.taxAddress||""} onChange={v=>upd("taxAddress",v)} placeholder="Dirección para facturación..."/>
+            </div>
+          </div>
+          <div style={{ marginTop:16, textAlign:"right" }}>
+            <Btn v="teal" sz="sm" onClick={() => onSave(c)}>Guardar datos fiscales</Btn>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB RELACIONES ── */}
+      {tab==="relaciones" && (
+        <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, padding:16 }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+            <div>
+              <div style={{ fontSize:12, fontWeight:700, color:B.dark }}>👨‍👩‍👧 Viajeros asociados</div>
+              <div style={{ fontSize:11, color:"#546E7A", marginTop:2 }}>Registra los datos de cónyuge, hijos, padres u otros viajeros frecuentes de este cliente.</div>
+            </div>
+            <button onClick={()=>upd("relaciones",[...(c.relaciones||[]),{id:uid(),tipo:"Cónyuge/Pareja",firstName:"",lastNameP:"",birthdate:"",passport:{numero:"",vencimiento:"",foto:null},visas:[]}])}
+              style={{ background:B.blue, color:"#fff", border:"none", borderRadius:6, padding:"6px 14px", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+              + Agregar viajero
+            </button>
+          </div>
+
+          {(c.relaciones||[]).length===0 && (
+            <div style={{ textAlign:"center", padding:32, color:"#B0BEC5", fontSize:11 }}>
+              <div style={{ fontSize:28, marginBottom:8 }}>👨‍👩‍👧</div>
+              No hay viajeros asociados a este cliente.<br/>Agrega cónyuge, hijos o familiares que viajan frecuentemente.
+            </div>
+          )}
+
+          {(c.relaciones||[]).map((rel,i)=>{
+            const relPassAlert = () => {
+              if(!rel.passport?.vencimiento) return null;
+              const venc = new Date(rel.passport.vencimiento);
+              const sixMo = new Date(); sixMo.setMonth(sixMo.getMonth()+6);
+              if(venc < new Date()) return "VENCIDO";
+              if(venc < sixMo) return "POR VENCER";
+              return null;
+            };
+            const rpa = relPassAlert();
+            const updRel = (f,v) => upd("relaciones",(c.relaciones||[]).map((x,j)=>j===i?{...x,[f]:v}:x));
+            return (
+              <div key={rel.id} style={{ border:"1px solid #E0E0E0", borderRadius:10, padding:16, marginBottom:12, background:"#FAFAFA" }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ fontSize:20 }}>👤</span>
+                    <div style={{ fontWeight:700, fontSize:13 }}>{[rel.firstName,rel.lastNameP].filter(Boolean).join(" ")||"Nuevo viajero"}</div>
+                    <span style={{ background:"#EDE7F6", color:"#512DA8", padding:"2px 8px", borderRadius:5, fontSize:10, fontWeight:700 }}>{rel.tipo}</span>
+                    {rpa && <span style={{ background: rpa==="VENCIDO"?"#FFEBEE":"#FFF8E1", color: rpa==="VENCIDO"?"#C62828":"#F9A825", padding:"2px 8px", borderRadius:5, fontSize:10, fontWeight:700 }}>⚠️ Pasaporte {rpa}</span>}
+                  </div>
+                  <button onClick={()=>upd("relaciones",(c.relaciones||[]).filter((_,j)=>j!==i))}
+                    style={{ background:"none", border:"none", cursor:"pointer", color:"#EF5350", fontSize:16 }}>✕ Eliminar</button>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr", gap:9 }}>
+                  <FS label="Relación" value={rel.tipo} onChange={v=>updRel("tipo",v)} options={RELACION_TIPOS.map(t=>({value:t,label:t}))}/>
+                  <FI label="Nombre(s)" value={rel.firstName||""} onChange={v=>updRel("firstName",v)}/>
+                  <FI label="Apellido" value={rel.lastNameP||""} onChange={v=>updRel("lastNameP",v)}/>
+                  <FI label="Fecha nacimiento" value={rel.birthdate||""} onChange={v=>updRel("birthdate",v)} type="date"/>
+                  <FI label="Pasaporte #" value={rel.passport?.numero||""} onChange={v=>updRel("passport",{...rel.passport,numero:v})}/>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:9, marginTop:9 }}>
+                  <FI label="Venc. pasaporte" value={rel.passport?.vencimiento||""} onChange={v=>updRel("passport",{...rel.passport,vencimiento:v})} type="date"/>
+                  <FI label="Móvil" value={rel.mobile||""} onChange={v=>updRel("mobile",v)} placeholder="+507 6000-0000"/>
+                  <FI label="Email" value={rel.email||""} onChange={v=>updRel("email",v)} placeholder="email@correo.com"/>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── TAB HISTORIAL ── */}
+      {tab==="historial" && (
+        <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, padding:16 }}>
+          <div style={{ textAlign:"center", padding:32, color:"#B0BEC5", fontSize:11 }}>
+            <div style={{ fontSize:28, marginBottom:8 }}>📋</div>
+            El historial de expedientes y monto total comprado se mostrará aquí.<br/>
+            <span style={{ fontSize:10 }}>Se conecta automáticamente con los expedientes asociados a este cliente.</span>
+          </div>
         </div>
       )}
     </div>
@@ -1383,40 +1624,92 @@ function CliForm({ client, onSave, onBack }) {
 
 // ─── CLIENTS LIST ─────────────────────────────────────────────────────────────
 function CliList({ clients, onSelect, onNew }) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch]   = useState("");
+  const [filtroTipo, setFiltroTipo] = useState("todos"); // todos, persona, empresa
+
+  const personas  = clients.filter(c => c.tipo !== "empresa");
+  const empresas  = clients.filter(c => c.tipo === "empresa");
+
   const filtered = clients.filter(c => {
     const s = search.toLowerCase();
-    const n = `${c.firstName} ${c.lastNameP} ${c.lastNameM}`.toLowerCase();
-    return !s || n.includes(s) || c.email.toLowerCase().includes(s) || c.mobile.includes(s);
+    const isEmp = c.tipo === "empresa";
+    const n = isEmp ? (c.razonSocial||"").toLowerCase() : `${c.firstName} ${c.lastNameP} ${c.lastNameM}`.toLowerCase();
+    const matchSearch = !s || n.includes(s) || (c.email||"").toLowerCase().includes(s) || (c.mobile||"").includes(s) || (c.clientNo||"").includes(s);
+    const matchTipo   = filtroTipo === "todos" || c.tipo === filtroTipo || (filtroTipo==="persona" && c.tipo !== "empresa");
+    return matchSearch && matchTipo;
   });
 
   return (
     <div style={{ padding:18, maxWidth:1100, margin:"0 auto" }}>
+      {/* Stats */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:14 }}>
+        {[
+          { label:"Total clientes", val:clients.length, icon:"👥", color:B.blue },
+          { label:"Personas naturales", val:personas.length, icon:"👤", color:B.teal },
+          { label:"Empresas", val:empresas.length, icon:"🏢", color:B.gold },
+        ].map(s=>(
+          <div key={s.label} style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:8, padding:"10px 14px", display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ fontSize:20 }}>{s.icon}</div>
+            <div>
+              <div style={{ fontSize:18, fontWeight:800, color:s.color }}>{s.val}</div>
+              <div style={{ fontSize:10, color:"#546E7A" }}>{s.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Barra de búsqueda y filtros */}
       <div style={{ display:"flex", gap:7, marginBottom:12, alignItems:"center" }}>
         <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="🔍 Buscar cliente..." style={{ ...SI, flex:1, padding:"6px 11px", fontSize:11 }}/>
+          placeholder="🔍 Buscar por nombre, email, móvil o # cliente..." style={{ ...SI, flex:1, padding:"6px 11px", fontSize:11 }}/>
+        {/* Filtro tipo */}
+        <div style={{ display:"flex", background:"#F1F5F9", borderRadius:7, padding:3, gap:2 }}>
+          {[{v:"todos",l:"Todos"},{v:"persona",l:"👤 Personas"},{v:"empresa",l:"🏢 Empresas"}].map(t=>(
+            <button key={t.v} onClick={()=>setFiltroTipo(t.v)}
+              style={{ padding:"4px 10px", borderRadius:5, border:"none", background:filtroTipo===t.v?"#fff":"transparent", color:filtroTipo===t.v?B.dark:"#546E7A", fontWeight:filtroTipo===t.v?700:400, fontSize:11, cursor:"pointer", fontFamily:"inherit" }}>
+              {t.l}
+            </button>
+          ))}
+        </div>
         <Btn v="teal" onClick={onNew}>+ Nuevo Cliente</Btn>
       </div>
+
       <div style={{ background:"#fff", border:"1px solid #E0E0E0", borderRadius:6, overflowX:"auto" }}>
         <table style={{ width:"100%", borderCollapse:"collapse", fontSize:10 }}>
           <thead>
             <tr style={{ background:B.dark, color:"#fff" }}>
-              {["Nombre","Email","Móvil","Categoría","Agente","Ciudad","Registrado",""].map(h => (
+              {["#","Tipo","Nombre / Razón Social","Email","Móvil","Categoría","Agente","Ciudad",""].map(h => (
                 <th key={h} style={{ padding:"7px 9px", textAlign:"left", fontSize:9, fontWeight:700 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtered.map((c,i) => {
-              const adv  = ADVISORS.find(a => a.id===c.advisorId);
-              const name = `${c.firstName} ${c.lastNameP}${c.lastNameM?" "+c.lastNameM:""}`.trim();
+              const adv     = ADVISORS.find(a => a.id===c.advisorId);
+              const isEmp   = c.tipo === "empresa";
+              const name    = isEmp ? (c.razonSocial||"Sin nombre") : `${c.firstName} ${c.lastNameP}${c.lastNameM?" "+c.lastNameM:""}`.trim();
+              // Alertas de documentos
+              const hasPassAlert = c.passport?.vencimiento && (() => {
+                const v = new Date(c.passport.vencimiento);
+                const s = new Date(); s.setMonth(s.getMonth()+6);
+                return v < s;
+              })();
               return (
                 <tr key={c.id}
                   style={{ background:i%2===0?"#fff":"#FAFAFA", borderBottom:"1px solid #F0F0F0", cursor:"pointer" }}
                   onMouseEnter={e => e.currentTarget.style.background="#E3F2FD"}
                   onMouseLeave={e => e.currentTarget.style.background=i%2===0?"#fff":"#FAFAFA"}
                   onClick={() => onSelect(c)}>
-                  <td style={{ padding:"7px 9px", fontWeight:600, color:B.blue }}>{name||"–"}</td>
+                  <td style={{ padding:"7px 9px", fontWeight:700, color:"#7C3AED", fontSize:10 }}>
+                    {c.clientNo ? `#${c.clientNo}` : "–"}
+                  </td>
+                  <td style={{ padding:"7px 9px" }}>
+                    <span style={{ fontSize:14 }}>{isEmp?"🏢":"👤"}</span>
+                  </td>
+                  <td style={{ padding:"7px 9px", fontWeight:600, color:B.blue }}>
+                    {name||"–"}
+                    {hasPassAlert && <span style={{ marginLeft:5, fontSize:9, background:"#FFF8E1", color:"#F9A825", padding:"1px 5px", borderRadius:3, fontWeight:700 }}>🔔 Docs</span>}
+                  </td>
                   <td style={{ padding:"7px 9px", color:"#546E7A" }}>{c.email||"–"}</td>
                   <td style={{ padding:"7px 9px" }}>{c.mobile||"–"}</td>
                   <td style={{ padding:"7px 9px" }}>
@@ -1424,7 +1717,6 @@ function CliList({ clients, onSelect, onNew }) {
                   </td>
                   <td style={{ padding:"7px 9px", color:"#546E7A" }}>{adv?.name||"–"}</td>
                   <td style={{ padding:"7px 9px", color:"#546E7A" }}>{c.city||"–"}</td>
-                  <td style={{ padding:"7px 9px", color:"#546E7A" }}>{c.created||"–"}</td>
                   <td style={{ padding:"7px 9px" }}><Btn v="secondary" sz="sm" onClick={ev => { ev.stopPropagation(); onSelect(c); }}>Ver</Btn></td>
                 </tr>
               );
@@ -5354,7 +5646,7 @@ export default function App() {
         <div style={{ flex:1 }}/>
         <input placeholder="Crear expediente - buscar cliente existente"
           style={{ ...SI, width:240, padding:"4px 9px", fontSize:10, background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.3)", color:"#fff", borderRadius:4 }}/>
-        <Btn v="gold" sz="sm" onClick={() => { setEditCli(mkClient()); setPage("cli-detail"); }}>+ Cliente nuevo</Btn>
+        <Btn v="gold" sz="sm" onClick={() => { setEditCli(mkClient(clients)); setPage("cli-detail"); }}>+ Cliente nuevo</Btn>
         <UserMenu user={user} onLogout={logout} onProfile={()=>goTo("cfg-agentes")}/>
       </div>
 
@@ -5376,7 +5668,7 @@ export default function App() {
 
           {page==="clientes" && !editCli && (
             canAccess("clientes")
-              ? <CliList clients={clients} onSelect={c=>{setEditCli(JSON.parse(JSON.stringify(c)));setPage("cli-detail");}} onNew={()=>{setEditCli(mkClient());setPage("cli-detail");}}/>
+              ? <CliList clients={clients} onSelect={c=>{setEditCli(JSON.parse(JSON.stringify(c)));setPage("cli-detail");}} onNew={()=>{setEditCli(mkClient(clients));setPage("cli-detail");}}/>
               : <AccessDenied pageName="Clientes"/>
           )}
           {page==="cli-detail" && editCli && (
