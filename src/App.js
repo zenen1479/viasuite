@@ -233,7 +233,13 @@ const CATALOG_PRODUCTS = [
 ];
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
-const uid   = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+const uid = () => {
+  // Genera UUID v4 compatible con Supabase
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+};
 const today = () => new Date().toISOString().slice(0,10);
 const fmt   = n  => Number(n||0).toLocaleString("en",{minimumFractionDigits:2,maximumFractionDigits:2});
 
