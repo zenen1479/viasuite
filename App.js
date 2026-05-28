@@ -3616,14 +3616,79 @@ function AgenciaConfig({ agency: initialAgency, onSave }) {
   const [saved, setSaved] = useState(false);
 
   const upd = (f,v) => setAg(p=>({...p,[f]:v}));
-  const save = () => { onSave && onSave(ag); setSaved(true); setTimeout(()=>setSaved(false),2500); };
+  const save = () => {
+    const fullAg = {
+      ...ag,
+      divisasActivas, divisaPrincipal,
+      conceptosPersonalizados, tiposPersonalizados,
+    };
+    onSave && onSave(fullAg);
+    setSaved(true);
+    setTimeout(()=>setSaved(false),2500);
+  };
 
   const TABS = [
     {id:"general",   label:"General",    icon:"🏢"},
     {id:"contacto",  label:"Contacto",   icon:"📞"},
     {id:"marca",     label:"Marca",      icon:"🎨"},
     {id:"factura",   label:"Facturación",icon:"📄"},
+    {id:"divisas",   label:"Divisas",    icon:"💱"},
+    {id:"conceptos", label:"Conceptos",  icon:"📋"},
   ];
+
+  // Estado para divisas y conceptos personalizados
+  const ALL_CURRENCIES = [
+    {code:"USD", name:"Dólar Estadounidense",  symbol:"$",  flag:"🇺🇸"},
+    {code:"EUR", name:"Euro",                   symbol:"€",  flag:"🇪🇺"},
+    {code:"MXN", name:"Peso Mexicano",           symbol:"$",  flag:"🇲🇽"},
+    {code:"COP", name:"Peso Colombiano",         symbol:"$",  flag:"🇨🇴"},
+    {code:"PEN", name:"Sol Peruano",             symbol:"S/", flag:"🇵🇪"},
+    {code:"ARS", name:"Peso Argentino",          symbol:"$",  flag:"🇦🇷"},
+    {code:"CLP", name:"Peso Chileno",            symbol:"$",  flag:"🇨🇱"},
+    {code:"BRL", name:"Real Brasileño",          symbol:"R$", flag:"🇧🇷"},
+    {code:"GBP", name:"Libra Esterlina",         symbol:"£",  flag:"🇬🇧"},
+    {code:"CAD", name:"Dólar Canadiense",        symbol:"$",  flag:"🇨🇦"},
+    {code:"JPY", name:"Yen Japonés",             symbol:"¥",  flag:"🇯🇵"},
+    {code:"AED", name:"Dírham Emiratos",         symbol:"د.إ",flag:"🇦🇪"},
+    {code:"PAB", name:"Balboa Panameño",         symbol:"B/.",flag:"🇵🇦"},
+    {code:"GTQ", name:"Quetzal Guatemalteco",    symbol:"Q",  flag:"🇬🇹"},
+    {code:"CRC", name:"Colón Costarricense",     symbol:"₡",  flag:"🇨🇷"},
+    {code:"DOP", name:"Peso Dominicano",         symbol:"RD$",flag:"🇩🇴"},
+  ];
+  const [divisasActivas, setDivisasActivas] = useState(
+    ag.divisasActivas || ["USD","EUR","MXN","COP","PEN"]
+  );
+  const [divisaPrincipal, setDivisaPrincipal] = useState(
+    ag.divisaPrincipal || "USD"
+  );
+
+  // Conceptos personalizados
+  const CONCEPTOS_DEFAULT = ["HOTELES NACIONALES","HOTELES INTERNACIONALES","VUELOS NACIONALES","VUELOS INTERNACIONALES","TOURS Y EXCURSIONES","TRASLADOS","SEGUROS DE VIAJE","CRUCEROS","PAQUETES TURISTICOS","OTROS SERVICIOS"];
+  const [conceptosPersonalizados, setConceptosPersonalizados] = useState(
+    ag.conceptosPersonalizados || []
+  );
+  const [newConcepto, setNewConcepto] = useState("");
+  const addConcepto = () => {
+    const val = newConcepto.trim().toUpperCase();
+    if(!val || conceptosPersonalizados.includes(val) || CONCEPTOS_DEFAULT.includes(val)) return;
+    setConceptosPersonalizados(p=>[...p,val]);
+    setNewConcepto("");
+  };
+  const delConcepto = c => setConceptosPersonalizados(p=>p.filter(x=>x!==c));
+
+  // Tipos de gasto personalizados
+  const TIPOS_DEFAULT = ["Gasto Fijo","Gasto Variable","Servicios","Gasto Operación","Impuestos","Otros"];
+  const [tiposPersonalizados, setTiposPersonalizados] = useState(
+    ag.tiposPersonalizados || []
+  );
+  const [newTipo, setNewTipo] = useState("");
+  const addTipo = () => {
+    const val = newTipo.trim();
+    if(!val || tiposPersonalizados.includes(val) || TIPOS_DEFAULT.includes(val)) return;
+    setTiposPersonalizados(p=>[...p,val]);
+    setNewTipo("");
+  };
+  const delTipo = t => setTiposPersonalizados(p=>p.filter(x=>x!==t));
 
   return (
     <div style={{padding:20,maxWidth:800}}>
@@ -3732,6 +3797,125 @@ function AgenciaConfig({ agency: initialAgency, onSave }) {
             </div>
           </div>
         )}
+
+        {/* ── TAB DIVISAS ── */}
+        {tab==="divisas" && (
+          <div>
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:12,fontWeight:700,color:B.dark,marginBottom:4}}>💱 Divisa principal</div>
+              <div style={{fontSize:11,color:"#546E7A",marginBottom:12}}>La divisa principal se usa por defecto en cotizaciones, expedientes y reportes.</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {ALL_CURRENCIES.filter(c=>divisasActivas.includes(c.code)).map(c=>(
+                  <button key={c.code} onClick={()=>setDivisaPrincipal(c.code)}
+                    style={{padding:"8px 14px",borderRadius:8,border:`2px solid ${divisaPrincipal===c.code?B.blue:"#E0E0E0"}`,background:divisaPrincipal===c.code?"#EFF6FF":"#fff",cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6,fontSize:12,fontWeight:divisaPrincipal===c.code?700:400,color:divisaPrincipal===c.code?B.blue:"#333"}}>
+                    {c.flag} {c.code} <span style={{color:"#90A4AE",fontSize:10}}>{c.symbol}</span>
+                    {divisaPrincipal===c.code&&<span style={{fontSize:9,background:B.blue,color:"#fff",padding:"1px 5px",borderRadius:3,marginLeft:2}}>PRINCIPAL</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{borderTop:"1px solid #F0F0F0",paddingTop:20}}>
+              <div style={{fontSize:12,fontWeight:700,color:B.dark,marginBottom:4}}>🌍 Divisas activas en el sistema</div>
+              <div style={{fontSize:11,color:"#546E7A",marginBottom:16}}>Activa las divisas que tu agencia maneja. Solo las activas aparecerán en cotizaciones, expedientes y reportes.</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:8}}>
+                {ALL_CURRENCIES.map(c=>{
+                  const active = divisasActivas.includes(c.code);
+                  const isPrincipal = divisaPrincipal===c.code;
+                  return (
+                    <label key={c.code} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,border:`1px solid ${active?"#BBDEFB":"#E0E0E0"}`,background:active?"#EFF6FF":"#fff",cursor:isPrincipal?"default":"pointer",opacity:isPrincipal?1:1}}>
+                      <input type="checkbox" checked={active} disabled={isPrincipal}
+                        onChange={e=>{
+                          if(isPrincipal) return;
+                          setDivisasActivas(p=>e.target.checked?[...p,c.code]:p.filter(x=>x!==c.code));
+                        }}/>
+                      <span style={{fontSize:18}}>{c.flag}</span>
+                      <div>
+                        <div style={{fontSize:12,fontWeight:700,color:active?B.blue:"#333"}}>{c.code} <span style={{fontWeight:400,color:"#90A4AE"}}>{c.symbol}</span></div>
+                        <div style={{fontSize:10,color:"#90A4AE"}}>{c.name}</div>
+                      </div>
+                      {isPrincipal&&<span style={{marginLeft:"auto",fontSize:9,background:B.blue,color:"#fff",padding:"2px 6px",borderRadius:3}}>PRINCIPAL</span>}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB CONCEPTOS ── */}
+        {tab==="conceptos" && (
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+
+            {/* Conceptos de venta */}
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:B.dark,marginBottom:4}}>📦 Conceptos de venta / expediente</div>
+              <div style={{fontSize:11,color:"#546E7A",marginBottom:12}}>Aparecen en el selector de conceptos al crear items en expedientes y cotizaciones.</div>
+
+              {/* Predefinidos */}
+              <div style={{fontSize:10,fontWeight:700,color:"#90A4AE",marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Predefinidos (no editables)</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:16}}>
+                {CONCEPTOS_DEFAULT.map(c=>(
+                  <span key={c} style={{background:"#F5F7FA",border:"1px solid #E0E0E0",borderRadius:5,padding:"3px 9px",fontSize:11,color:"#546E7A"}}>{c}</span>
+                ))}
+              </div>
+
+              {/* Personalizados */}
+              <div style={{fontSize:10,fontWeight:700,color:B.blue,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Personalizados de tu agencia</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:12}}>
+                {conceptosPersonalizados.length===0&&<span style={{fontSize:11,color:"#B0BEC5"}}>Aún no has agregado conceptos personalizados</span>}
+                {conceptosPersonalizados.map(c=>(
+                  <span key={c} style={{background:"#EFF6FF",border:"1px solid #BBDEFB",borderRadius:5,padding:"3px 9px",fontSize:11,color:B.blue,display:"flex",alignItems:"center",gap:5}}>
+                    {c}
+                    <button onClick={()=>delConcepto(c)} style={{background:"none",border:"none",cursor:"pointer",color:"#EF5350",fontSize:12,padding:0,lineHeight:1}}>✕</button>
+                  </span>
+                ))}
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <input value={newConcepto} onChange={e=>setNewConcepto(e.target.value.toUpperCase())}
+                  onKeyDown={e=>e.key==="Enter"&&addConcepto()}
+                  placeholder="NUEVO CONCEPTO..." style={{...SI,flex:1,fontSize:11}}/>
+                <button onClick={addConcepto}
+                  style={{background:B.blue,color:"#fff",border:"none",borderRadius:6,padding:"6px 14px",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit"}}>+ Agregar</button>
+              </div>
+            </div>
+
+            {/* Tipos de gasto */}
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:B.dark,marginBottom:4}}>💸 Tipos de gasto</div>
+              <div style={{fontSize:11,color:"#546E7A",marginBottom:12}}>Aparecen en el módulo de Gastos al clasificar conceptos de gasto.</div>
+
+              {/* Predefinidos */}
+              <div style={{fontSize:10,fontWeight:700,color:"#90A4AE",marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Predefinidos (no editables)</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:16}}>
+                {TIPOS_DEFAULT.map(t=>(
+                  <span key={t} style={{background:"#F5F7FA",border:"1px solid #E0E0E0",borderRadius:5,padding:"3px 9px",fontSize:11,color:"#546E7A"}}>{t}</span>
+                ))}
+              </div>
+
+              {/* Personalizados */}
+              <div style={{fontSize:10,fontWeight:700,color:B.gold,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Personalizados de tu agencia</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:12}}>
+                {tiposPersonalizados.length===0&&<span style={{fontSize:11,color:"#B0BEC5"}}>Aún no has agregado tipos personalizados</span>}
+                {tiposPersonalizados.map(t=>(
+                  <span key={t} style={{background:"#FFF8E1",border:"1px solid #FFE082",borderRadius:5,padding:"3px 9px",fontSize:11,color:"#F9A825",display:"flex",alignItems:"center",gap:5}}>
+                    {t}
+                    <button onClick={()=>delTipo(t)} style={{background:"none",border:"none",cursor:"pointer",color:"#EF5350",fontSize:12,padding:0,lineHeight:1}}>✕</button>
+                  </span>
+                ))}
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <input value={newTipo} onChange={e=>setNewTipo(e.target.value)}
+                  onKeyDown={e=>e.key==="Enter"&&addTipo()}
+                  placeholder="Nuevo tipo de gasto..." style={{...SI,flex:1,fontSize:11}}/>
+                <button onClick={addTipo}
+                  style={{background:B.gold,color:"#fff",border:"none",borderRadius:6,padding:"6px 14px",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit"}}>+ Agregar</button>
+              </div>
+            </div>
+
+          </div>
+        )}
+
       </div>
     </div>
   );
