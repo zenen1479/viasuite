@@ -2,7 +2,8 @@ import { useState } from "react";
 import React from "react";
 
 // ─── SUPABASE CONNECTION ──────────────────────────────────────────────────────
-const SUPA_URL = "https://fclsntukwmkpikbmrity.supabase.co";
+const SUPA_URL   = "https://fclsntukwmkpikbmrity.supabase.co";
+const AGENCY_ID  = "00000000-0000-0000-0000-000000000001"; // Travel Advisors Panama
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZjbHNudHVrd21rcGlrYm1yaXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyOTgzODUsImV4cCI6MjA5NDg3NDM4NX0.XbRM0j-3pYVvmD8_jb7AamRUNBfxq0hUowDRVkTTBEA";
 
 const supa = {
@@ -102,7 +103,7 @@ const dbToClient = r => ({
 
 const clientToDB = (c, agencyId) => ({
   cat: c.cat, status: c.status, advisor_id: c.advisorId,
-  agency_id: agencyId || c.agencyId || null,
+  agency_id: agencyId || c.agencyId || AGENCY_ID,
   tipo: c.tipo || "persona",
   client_no: c.clientNo || null,
   // Persona
