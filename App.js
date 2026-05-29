@@ -102,27 +102,46 @@ const dbToClient = r => ({
 });
 
 const clientToDB = (c, agencyId) => ({
-  // Solo columnas que existen en Supabase
-  agency_id: agencyId || c.agencyId || AGENCY_ID,
-  cat: c.cat||"GENERAL",
-  status: c.status||"activo",
-  advisor_id: c.advisorId||null,
-  first_name: c.tipo==="empresa" ? (c.razonSocial||"") : (c.firstName||""),
-  last_name_p: c.tipo==="empresa" ? "" : (c.lastNameP||""),
-  last_name_m: c.tipo==="empresa" ? "" : (c.lastNameM||""),
-  birthdate: c.birthdate||null,
-  mobile: c.mobile||"",
-  phone: c.phone||"",
-  email: c.email||"",
-  email2: c.email2||"",
-  address: c.address||"",
-  city: c.city||"",
-  country: c.country||"Panama",
-  nationality: c.nationality||"Panama - PA",
-  notes: c.notes||"",
-  how_know: c.howKnow||null,
-  recommended: c.recommended||null,
-  contact: c.contact||null,
+  agency_id:    agencyId || c.agencyId || AGENCY_ID,
+  cat:          c.cat||"GENERAL",
+  status:       c.status||"activo",
+  advisor_id:   c.advisorId||null,
+  tipo:         c.tipo||"persona",
+  client_no:    c.clientNo||null,
+  // Persona natural
+  first_name:   c.tipo==="empresa" ? (c.razonSocial||"") : (c.firstName||""),
+  last_name_p:  c.tipo==="empresa" ? "" : (c.lastNameP||""),
+  last_name_m:  c.tipo==="empresa" ? "" : (c.lastNameM||""),
+  birthdate:    c.birthdate||null,
+  // Empresa
+  razon_social: c.razonSocial||null,
+  ruc:          c.ruc||null,
+  representante:c.representante||null,
+  // Contacto
+  mobile:       c.mobile||"",
+  phone:        c.phone||"",
+  office_phone: c.officePhone||null,
+  email:        c.email||"",
+  email2:       c.email2||"",
+  address:      c.address||"",
+  colonia:      c.colonia||null,
+  city:         c.city||"",
+  cp:           c.cp||null,
+  state:        c.state||null,
+  country:      c.country||"Panama",
+  nationality:  c.nationality||"Panama - PA",
+  contact:      c.contact||null,
+  recommended:  c.recommended||null,
+  how_know:     c.howKnow||null,
+  notes:        c.notes||"",
+  // Documentos (JSON)
+  passport:     c.passport ? JSON.stringify(c.passport) : null,
+  visas:        c.visas?.length ? JSON.stringify(c.visas) : null,
+  relaciones:   c.relaciones?.length ? JSON.stringify(c.relaciones) : null,
+  // Fiscal
+  tax_id:       c.taxId||null,
+  tax_name:     c.taxName||null,
+  tax_address:  c.taxAddress||null,
 });
 
 const dbToExp = (r, items=[], payments=[], majorPayments=[], alarms=[]) => ({
