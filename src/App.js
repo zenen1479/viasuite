@@ -93,9 +93,9 @@ const dbToClient = r => ({
   contact: r.contact||"", recommended: r.recommended||"", howKnow: r.how_know||"",
   notes: r.notes||"",
   // Documentos
-  passport: r.passport ? JSON.parse(r.passport) : { numero:"", vencimiento:"", foto:null },
-  visas: r.visas ? JSON.parse(r.visas) : [],
-  relaciones: r.relaciones ? JSON.parse(r.relaciones) : [],
+  passport: r.passport ? (typeof r.passport === "string" ? JSON.parse(r.passport) : r.passport) : { numero:"", vencimiento:"", foto:null },
+  visas: r.visas ? (typeof r.visas === "string" ? JSON.parse(r.visas) : r.visas) : [],
+  relaciones: r.relaciones ? (typeof r.relaciones === "string" ? JSON.parse(r.relaciones) : r.relaciones) : [],
   // Fiscal
   taxId: r.tax_id||"", taxName: r.tax_name||"", taxAddress: r.tax_address||"",
   docs: [],
@@ -134,10 +134,10 @@ const clientToDB = (c, agencyId) => ({
   recommended:  c.recommended||null,
   how_know:     c.howKnow||null,
   notes:        c.notes||"",
-  // Documentos (JSON)
-  passport:     c.passport ? JSON.stringify(c.passport) : null,
-  visas:        c.visas?.length ? JSON.stringify(c.visas) : null,
-  relaciones:   c.relaciones?.length ? JSON.stringify(c.relaciones) : null,
+  // Documentos (jsonb — Supabase acepta objeto directo)
+  passport:     c.passport?.numero ? c.passport : null,
+  visas:        c.visas?.length ? c.visas : null,
+  relaciones:   c.relaciones?.length ? c.relaciones : null,
   // Fiscal
   tax_id:       c.taxId||null,
   tax_name:     c.taxName||null,
