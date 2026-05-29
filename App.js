@@ -1532,7 +1532,7 @@ function CliForm({ client, onSave, onBack }) {
                 <div style={{ fontSize:10, fontWeight:700, color:"#546E7A", marginBottom:6 }}>FOTO DEL PASAPORTE</div>
                 <label style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", border:"1px dashed #BBDEFB", borderRadius:6, cursor:"pointer", fontSize:11, color:B.blue }}>
                   <span>📎</span>
-                  {c.passport?.foto ? "✓ Foto cargada — clic para cambiar" : "Cargar foto del pasaporte"}
+                  {c.passport?.foto ? "🔄 Cambiar foto" : "Cargar foto del pasaporte"}
                   <input type="file" accept="image/*,.pdf" style={{ display:"none" }}
                     onChange={e=>{
                       const file = e.target.files[0];
@@ -1544,12 +1544,44 @@ function CliForm({ client, onSave, onBack }) {
                 </label>
                 {c.passport?.foto && (
                   <div style={{ marginTop:6, display:"flex", alignItems:"center", gap:6 }}>
-                    <span style={{ fontSize:10, color:"#546E7A" }}>📄 {c.passport.fotoName||"Foto cargada"}</span>
-                    <button onClick={()=>upd("passport",{...c.passport,foto:null,fotoName:""})} style={{ background:"none",border:"none",cursor:"pointer",color:"#EF5350",fontSize:11 }}>✕ Eliminar</button>
+                    <button onClick={()=>upd("passport",{...c.passport,foto:null,fotoName:""})} style={{ background:"none",border:"none",cursor:"pointer",color:"#EF5350",fontSize:11 }}>✕ Eliminar foto</button>
                   </div>
                 )}
               </div>
             </div>
+
+            {/* ── PREVIEW PASAPORTE ── */}
+            {c.passport?.foto && (
+              <div style={{ marginBottom:16, border:"1px solid #BBDEFB", borderRadius:10, overflow:"hidden", background:"#F8FBFF" }}>
+                <div style={{ background:"#1565C0", color:"#fff", padding:"8px 14px", fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                  <span>🛂 Pasaporte — {c.passport.fotoName||"Foto"}</span>
+                  <div style={{ display:"flex", gap:16, fontSize:11, fontWeight:400, opacity:.85 }}>
+                    {c.passport.numero && <span>N°: <strong>{c.passport.numero}</strong></span>}
+                    {c.passport.vencimiento && <span>Vence: <strong>{new Date(c.passport.vencimiento).toLocaleDateString("es-PA",{day:"2-digit",month:"short",year:"numeric"})}</strong></span>}
+                  </div>
+                </div>
+                {c.passport.foto.startsWith("data:image") ? (
+                  <img
+                    src={c.passport.foto}
+                    alt="Pasaporte"
+                    style={{ width:"100%", maxHeight:380, objectFit:"contain", display:"block", background:"#000", cursor:"pointer" }}
+                    onClick={()=>window.open(c.passport.foto,"_blank")}
+                    title="Clic para abrir en pantalla completa"
+                  />
+                ) : (
+                  <div style={{ padding:"16px 20px", display:"flex", alignItems:"center", gap:12 }}>
+                    <span style={{ fontSize:32 }}>📄</span>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#1565C0" }}>{c.passport.fotoName||"Documento PDF"}</div>
+                      <a href={c.passport.foto} target="_blank" rel="noopener noreferrer"
+                        style={{ fontSize:11, color:B.blue, textDecoration:"underline" }}>
+                        Abrir PDF en nueva pestaña →
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Visas */}
