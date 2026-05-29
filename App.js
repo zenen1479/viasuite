@@ -1555,10 +1555,9 @@ function CliForm({ client, onSave, onBack }) {
             </div>
 
             {/* ── PREVIEW PASAPORTE ── */}
-            {/* Debug: mostrar info de passport */}
             {c.passport && !c.passport?.foto && (
-              <div style={{ padding:"8px 12px", background:"#FFF8E1", borderRadius:6, fontSize:11, color:"#F9A825", marginBottom:12 }}>
-                ⚠️ Pasaporte registrado pero sin foto cargada. Sube una imagen JPG/PNG del pasaporte.
+              <div style={{ padding:"8px 12px", background:"#F8FAFC", border:"1px dashed #BBDEFB", borderRadius:6, fontSize:11, color:"#90A4AE", marginBottom:12 }}>
+                📎 Sin foto de pasaporte cargada. Sube una imagen JPG/PNG para visualizarla aquí.
               </div>
             )}
             {c.passport?.foto && (
