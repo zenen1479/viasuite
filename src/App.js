@@ -93,7 +93,11 @@ const dbToClient = r => ({
   contact: r.contact||"", recommended: r.recommended||"", howKnow: r.how_know||"",
   notes: r.notes||"",
   // Documentos
-  passport: r.passport ? (typeof r.passport === "string" ? JSON.parse(r.passport) : r.passport) : { numero:"", vencimiento:"", foto:null },
+  passport: (() => {
+    if (!r.passport) return { numero:"", vencimiento:"", foto:null };
+    const p = typeof r.passport === "string" ? JSON.parse(r.passport) : r.passport;
+    return { numero: p.numero||"", vencimiento: p.vencimiento||"", foto: p.foto||null, fotoName: p.fotoName||"" };
+  })(),
   visas: r.visas ? (typeof r.visas === "string" ? JSON.parse(r.visas) : r.visas) : [],
   relaciones: r.relaciones ? (typeof r.relaciones === "string" ? JSON.parse(r.relaciones) : r.relaciones) : [],
   // Fiscal
@@ -1551,6 +1555,12 @@ function CliForm({ client, onSave, onBack }) {
             </div>
 
             {/* ── PREVIEW PASAPORTE ── */}
+            {/* Debug: mostrar info de passport */}
+            {c.passport && !c.passport?.foto && (
+              <div style={{ padding:"8px 12px", background:"#FFF8E1", borderRadius:6, fontSize:11, color:"#F9A825", marginBottom:12 }}>
+                ⚠️ Pasaporte registrado pero sin foto cargada. Sube una imagen JPG/PNG del pasaporte.
+              </div>
+            )}
             {c.passport?.foto && (
               <div style={{ marginBottom:16, border:"1px solid #BBDEFB", borderRadius:10, overflow:"hidden", background:"#F8FBFF" }}>
                 <div style={{ background:"#1565C0", color:"#fff", padding:"8px 14px", fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
